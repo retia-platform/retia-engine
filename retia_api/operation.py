@@ -759,7 +759,7 @@ def getInterfaceOutThroughput(mgmt_ipaddr: str, int_name: str, start_time, end_t
     start_time=start_time.replace("+","%2B")
     end_time=end_time.replace("+","%2B")
 
-    target_url="http://localhost:9090/api/v1/query_range?query=irate(ifHCOutOctets{instance='%s',ifDescr='%s'}[30s])*8&start=%s&end=%s&step=%s"%(mgmt_ipaddr, int_name, start_time, end_time, step)
+    target_url="http://localhost:9090/api/v1/query_range?query=irate(ifHCOutOctets{instance='%s',ifDescr='%s'}[30s])*8 OR on() vector(0)&start=%s&end=%s&step=%s"%(mgmt_ipaddr, int_name, start_time, end_time, step)
     try:
         response_body_temp=json.loads(requests.get(url=target_url).text)['data']['result']
         if len(response_body_temp)>1:
