@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-i1fdaod&x04^wp_#wv(dj&y)jzqcc7b8lr(9d%(zgbx8njwv_5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["99.99.99.2"]
+ALLOWED_HOSTS = ["99.99.99.2","172.16.0.2"]
 
 # For JWT Auth
 REST_FRAMEWORK = {
