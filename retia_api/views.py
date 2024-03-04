@@ -332,10 +332,15 @@ def detectors(request):
     if request.method=='GET':
         serializer=DetectorSerializer(instance=detector, many=True)
         detector_instances=serializer.data
-        detector_instance_name=[]
-        for detector_instance in detector_instances:
-            detector_instance_name.append(detector_instance["device"])
-        return Response(detector_instance_name)
+
+        device_statuses=['up','down']
+
+        detector_instance_sum=[{}]
+        for i, detector_instance in enumerate(detector_instances):
+            detector_instance_sum[i]['device']=detector_instance["device"]
+            detector_instance_sum[i]['status']=device_statuses[int(getDeviceUpStatus(detector[i].device.mgmt_ipaddr))-1]
+
+        return Response(detector_instance_sum)
     elif request.method=='POST':
         serializer=DetectorSerializer(data=request.data)
         if serializer.is_valid():
@@ -367,7 +372,13 @@ def detector_detail(request, device):
     if request.method=='GET':
         device_sync_status=check_device_detector_config(conn_strings=conn_strings, req_to_check={"device_interface_to_server": detector.device_interface_to_server, "device_interface_to_filebeat":detector.device_interface_to_filebeat, "filebeat_host": detector.filebeat_host, "filebeat_port":detector.filebeat_port})
         serializer=DetectorSerializer(instance=detector)
-        detector_data={"sync":device_sync_status, "data":serializer.data}
+        data=serializer.data
+
+        device_statuses=['up','down']
+        data['status']=device_statuses[int(getDeviceUpStatus(detector.device.mgmt_ipaddr))-1]
+        
+        detector_data={"sync":device_sync_status, "data":data}
+
         return Response(detector_data)
     
     elif request.method=='PUT':
@@ -436,13 +447,17 @@ def detector_start(request, device):
     except Detector.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     
-    # if request.method=='PUT':
+    if request.method=='PUT':
     #     scheduler=BackgroundScheduler()
     #     scheduler.add_job(func=detector_job, args=[detector], trigger="cron", seconds=detector.sampling_interval, id=detector.device,max_instances=1, replace_existing=True)
     #     scheduler.start()
-    scheduler=BackgroundScheduler()
-    scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
-    scheduler.start()
+        try:
+            scheduler=BackgroundScheduler()
+            scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
+            scheduler.start()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response(status=status.http_500_internal_server_error, body=e)
     # try:
     #     scheduler=BackgroundScheduler()
     #     scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second="*/%s"%(detector.sampling_interval), id=str(detector.device), max_instances=1, replace_existing=True)
