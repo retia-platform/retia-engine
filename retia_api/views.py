@@ -13,7 +13,8 @@ from datetime import datetime, timezone
 import tzlocal
 import yaml
 from timeit import default_timer as timer
-
+from threading import Thread
+import queue
 
 @api_view(['GET','POST'])
 def devices(request):
@@ -80,12 +81,27 @@ def device_detail(request, hostname):
 
         serializer=DeviceSerializer(instance=device)
         data=dict(serializer.data)
-        data["sotfware_version"]=getVersion(conn_strings=conn_strings)["body"]
-        data["login_banner"]=getLoginBanner(conn_strings=conn_strings)["body"]
-        data["motd_banner"]=getMotdBanner(conn_strings=conn_strings)["body"]
-        data['sys_uptime']=getSysUpTime(device.mgmt_ipaddr)
-        device_statuses=['up','down']
-        data['status']=device_statuses[int(getDeviceUpStatus(device.mgmt_ipaddr))-1]
+        def parallel_version():
+            data["sotfware_version"]=getVersion(conn_strings=conn_strings)["body"]
+        def parallel_loginbanner():
+            data["login_banner"]=getLoginBanner(conn_strings=conn_strings)["body"]
+        def parallel_motdbanner():
+            data["motd_banner"]=getMotdBanner(conn_strings=conn_strings)["body"]
+        def parallel_sysuptime():
+            data['sys_uptime']=getSysUpTime(device.mgmt_ipaddr)
+        def parallel_devicestatus():
+            device_statuses=['up','down']
+            data['status']=device_statuses[int(getDeviceUpStatus(device.mgmt_ipaddr))-1]
+        
+        functions=[parallel_version, parallel_loginbanner, parallel_motdbanner, parallel_sysuptime, parallel_devicestatus]
+        threads=[]
+        for function in functions:
+            run_thread=Thread(target=function)
+            run_thread.start()
+            threads.append(run_thread)
+
+        for thread in threads:
+            thread.join()
 
         return Response(data)
     
@@ -169,7 +185,11 @@ def interface_detail(request, hostname, name):
     if request.method=='GET':
         result=getInterfaceDetail(conn_strings=conn_strings, req_to_show={"name":name})
         int_statuses=['up','down','testing','unknown','dormant','notPresent','lowerLayerDown']
-        result["body"]["status"]=int_statuses[int(getIntUpStatus(device.mgmt_ipaddr, name))-1]
+        try:
+            int_status_result=int_statuses[int(getIntUpStatus(device.mgmt_ipaddr, name))-1]
+            result["body"]["status"]=int_status_result
+        except:
+            result["body"]["status"]={}
         return Response(result)
     elif request.method=='PUT':
         result=setInterfaceDetail(conn_strings=conn_strings, req_to_change=request.data)

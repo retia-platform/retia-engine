@@ -7,7 +7,6 @@ from datetime import datetime
 from math import ceil
 import tzlocal
 
-
 # Disable Sertificate Insecure Request Warning
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
@@ -207,7 +206,7 @@ def getInterfaceList(conn_strings:dict)->dict:
     target_url="https://%s:%s/restconf/data/ietf-interfaces:interfaces/interface?fields=name"%(conn_strings["ipaddr"], conn_strings["port"])
 
     try:
-        response=requests.get(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False)
+        response=requests.get(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, timeout=5)
     except requests.exceptions.ConnectionError:
         err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
         response=err
@@ -233,7 +232,7 @@ def getInterfaceDetail(conn_strings: dict, req_to_show: dict)->dict:
     target_url="https://%s:%s/restconf/data/ietf-interfaces:interfaces/interface=%s"%(conn_strings["ipaddr"], conn_strings["port"], req_to_show["name"])
 
     try:
-        response=requests.get(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False)
+        response=requests.get(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, timeout=5)
     except requests.exceptions.ConnectionError:
         err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
         response=err
@@ -265,7 +264,7 @@ def setInterfaceDetail(conn_strings:dict, req_to_change: dict)->dict:
         except:
             int_type=None
         body=json.dumps({"ietf-interfaces:interface":{"name":req_to_change["name"], "type": int_type, "enabled": req_to_change["enabled"], "ietf-ip:ipv4": {"address":[{"ip":req_to_change["ip"], "netmask":req_to_change["netmask"]}]},"ietf-ip:ipv6":{}}}, indent=2)
-        response=requests.put(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, data=body)
+        response=requests.put(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, data=body, timeout=5)
     except requests.exceptions.ConnectionError:
         err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
         response=err
@@ -722,11 +721,17 @@ def getSysUpTime(mgmt_ipaddr: str):
     return response_body
 
 def getDeviceUpStatus(mgmt_ipaddr: str):
-    response_body=json.loads(requests.get(url="http://localhost:9090/api/v1/query?query=up{instance='%s'}"%(mgmt_ipaddr)).text)['data']['result'][0]['value'][1]
+    try:
+        response_body=json.loads(requests.get(url="http://localhost:9090/api/v1/query?query=up{instance='%s'}"%(mgmt_ipaddr)).text)['data']['result'][0]['value'][1]
+    except:
+        response_body={}
     return response_body
 
 def getIntUpStatus(mgmt_ipaddr: str, int_name:str):
-    response_body=json.loads(requests.get(url="http://localhost:9090/api/v1/query?query=ifOperStatus{instance='%s',ifDescr='%s'}"%(mgmt_ipaddr, int_name)).text)['data']['result'][0]['value'][1]
+    try:
+        response_body=json.loads(requests.get(url="http://localhost:9090/api/v1/query?query=ifOperStatus{instance='%s',ifDescr='%s'}"%(mgmt_ipaddr, int_name)).text)['data']['result'][0]['value'][1]
+    except:
+        response_body={}
     return response_body
 
 def getInterfaceInThroughput(mgmt_ipaddr: str, int_name: str, start_time, end_time):
