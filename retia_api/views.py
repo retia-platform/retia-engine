@@ -339,7 +339,7 @@ def detectors(request):
         for i, detector_instance in enumerate(detector_instances):
             detector_instance_sum[i]['device']=detector_instance["device"]
             detector_instance_sum[i]['status']=device_statuses[int(getDeviceUpStatus(detector[i].device.mgmt_ipaddr))-1]
-
+            detector_instance_sum[i]['mgmt_ipaddr']=detector[i].device.mgmt_ipaddr
         return Response(detector_instance_sum)
     elif request.method=='POST':
         serializer=DetectorSerializer(data=request.data)
@@ -374,9 +374,12 @@ def detector_detail(request, device):
         serializer=DetectorSerializer(instance=detector)
         data=serializer.data
 
+        data['mgmt_ipaddr']=detector.device.mgmt_ipaddr
+        
         device_statuses=['up','down']
         data['status']=device_statuses[int(getDeviceUpStatus(detector.device.mgmt_ipaddr))-1]
-        
+
+
         detector_data={"sync":device_sync_status, "data":data}
 
         return Response(detector_data)
