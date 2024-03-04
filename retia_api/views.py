@@ -338,6 +338,8 @@ def detectors(request):
         detector_instance_sum=[{}]
         for i, detector_instance in enumerate(detector_instances):
             detector_instance_sum[i]['device']=detector_instance["device"]
+            detector_instance_sum[i]['brand']=detector[i].device.brand
+            detector_instance_sum[i]['device_type']=detector[i].device.device_type
             detector_instance_sum[i]['status']=device_statuses[int(getDeviceUpStatus(detector[i].device.mgmt_ipaddr))-1]
             detector_instance_sum[i]['mgmt_ipaddr']=detector[i].device.mgmt_ipaddr
         return Response(detector_instance_sum)
@@ -373,6 +375,9 @@ def detector_detail(request, device):
         device_sync_status=check_device_detector_config(conn_strings=conn_strings, req_to_check={"device_interface_to_server": detector.device_interface_to_server, "device_interface_to_filebeat":detector.device_interface_to_filebeat, "filebeat_host": detector.filebeat_host, "filebeat_port":detector.filebeat_port})
         serializer=DetectorSerializer(instance=detector)
         data=serializer.data
+
+        data['brand']=detector.device.brand
+        data['device_type']=detector.device.device_type
 
         data['mgmt_ipaddr']=detector.device.mgmt_ipaddr
         
