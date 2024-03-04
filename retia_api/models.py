@@ -2,6 +2,8 @@ from django.db import models
 
 class Device(models.Model):
     hostname=models.CharField(max_length=63, primary_key=True)
+    brand=models.CharField(max_length=32, null=True)
+    device_type=models.CharField(max_length=10, null=True)
     mgmt_ipaddr=models.GenericIPAddressField()
     port=models.IntegerField(default=443)
     username=models.CharField(max_length=16, default=None)

@@ -4,7 +4,7 @@ from .models import Device, Detector, ActivityLog
 class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model=Device
-        fields=['hostname','mgmt_ipaddr', 'port', 'username', 'secret', 'created_at', 'modified_at']
+        fields=['hostname', 'brand', 'device_type', 'mgmt_ipaddr', 'port', 'username', 'secret', 'created_at', 'modified_at']
 
 class DetectorSerializer(serializers.ModelSerializer):
     class Meta:
