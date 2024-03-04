@@ -21,12 +21,15 @@ def devices(request):
         device=Device.objects.all()
         serializer=DeviceSerializer(instance=device, many=True)
         devices_data=serializer.data
+
+        device_statuses=['up','down']
         for i, device_data in enumerate(devices_data):
             del devices_data[i]["username"]
             del devices_data[i]["secret"]
             del devices_data[i]["port"]
             del devices_data[i]["created_at"]
             del devices_data[i]["modified_at"]
+            devices_data[i]['status']=device_statuses[int(getDeviceUpStatus(device[i].mgmt_ipaddr))-1]
         return Response(serializer.data)
     elif request.method=='POST':
         device=Device.objects.all()
