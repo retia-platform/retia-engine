@@ -394,10 +394,9 @@ def createAcl(conn_strings: dict, req_to_create: dict)->dict:
     return {"code": response.status_code, "body": response_body}
 
 def getAclDetail(conn_strings: dict, req_to_show: dict)->dict:
-
     response=getSomethingConfig(conn_strings=conn_strings, path="/ip/access-list/standard=%s"%(req_to_show["name"]))
     if len(response.text)>0:
-        # Get ACL entry
+        # Get ACL entry and rules
         try:
             acl_data=json.loads(response.text)["Cisco-IOS-XE-acl:standard"]
             if "access-list-seq-rule" in acl_data:
@@ -408,32 +407,36 @@ def getAclDetail(conn_strings: dict, req_to_show: dict)->dict:
                     prefix=acl_sequence[action]["std-ace"]["ipv4-prefix"] if "ipv4-prefix" in acl_sequence[action]["std-ace"] else "any"
                     mask=acl_sequence[action]["std-ace"]["mask"] if "mask" in acl_sequence[action]["std-ace"] else None
                     sequences.append({"sequence":sequence, "action": action, "prefix": prefix, "wildcard": mask})
+                    print("adads")
                 response_body={"name":acl_data["name"], "rules":sequences}
             else:
-                response_body={"name":acl_data["name"]}
+                response_body={"name":acl_data["name"], "rules":[]}
         except:
             response_body=json.loads(response.text)
 
         # Get ACL applied to interface
         response_body["apply_to_interface"]={}
         interface_config=json.loads(getSomethingConfig(conn_strings, "/interface").text)
-        for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
-            for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
-                try:
-                    if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_show['name']:
-                        response_body['apply_to_interface'][config_interface_type+str(int(idx)+1)]=[]
-                        response_body["apply_to_interface"][config_interface_type+str(int(idx)+1)].append("out")
-                except:
-                    pass
-                try:
-                    if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_show['name']:
-                        try:
-                            response_body["apply_to_interface"][config_interface_type+str(int(idx)+1)].append("in")
-                        except KeyError:
+        if not 'error' in interface_config:
+            for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
+                for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
+                    try:
+                        if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_show['name']:
                             response_body['apply_to_interface'][config_interface_type+str(int(idx)+1)]=[]
-                            response_body["apply_to_interface"][config_interface_type+str(int(idx)+1)].append("in")
-                except:
-                    pass
+                            response_body["apply_to_interface"][config_interface_type+str(int(idx)+1)].append("out")
+                    except:
+                        pass
+                    try:
+                        if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_show['name']:
+                            try:
+                                response_body["apply_to_interface"][config_interface_type+str(int(idx)+1)].append("in")
+                            except KeyError:
+                                response_body['apply_to_interface'][config_interface_type+str(int(idx)+1)]=[]
+                                response_body["apply_to_interface"][config_interface_type+str(int(idx)+1)].append("in")
+                    except:
+                        pass
+        else:
+            response_body=interface_config
 
     else:
         response_body={}
