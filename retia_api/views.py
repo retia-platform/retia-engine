@@ -12,9 +12,7 @@ from retia_api.logging import activity_log
 from datetime import datetime, timezone
 import tzlocal
 import yaml
-from timeit import default_timer as timer
 from threading import Thread
-
 
 @api_view(['GET','POST'])
 def devices(request):
@@ -324,7 +322,6 @@ def acls(request, hostname):
 
 @api_view(['GET','PUT','DELETE'])
 def acl_detail(request, hostname, name):
-    start=timer()
     # Check whether device exist in database
     try:
         device=Device.objects.get(pk=hostname)
@@ -348,7 +345,6 @@ def acl_detail(request, hostname, name):
             activity_log("info", hostname, "ACL", "ACL %s applied to interface successfully: %s"%(name, request.data['apply_to_interface']))
         else:
             activity_log("error", hostname, "ACL", "ACL %s applied to interface failed: %s"%(name, result['acl_apply']['body']))
-        
         return Response(result)
     elif request.method=="DELETE":
         result=delAcl(conn_strings=conn_strings, req_to_del={"name":name})
