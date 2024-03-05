@@ -1,10 +1,10 @@
 import json, requests
-from requests.exceptions import RequestException
 from rest_framework import status
 from retia_api.models import *
 from datetime import datetime
 from math import ceil
 import tzlocal
+from threading import Thread
 
 # Disable Sertificate Insecure Request Warning
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
@@ -513,7 +513,17 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
             response["acl_apply"]={'code': response_aclapply.status_code, 'body': json.loads(response_aclapply.text)}
         except Exception:
             response["acl_apply"]={'code': response_aclapply.status_code, 'body': {}}
-    # Add thread using above function
+
+    functions=[parallel_applyacl, parallel_editaclentry]
+    threads=[]
+    for function in functions:
+        run_thread=Thread(target=function)
+        run_thread.start()
+        threads.append(run_thread)
+
+    for thread in threads:
+        thread.join()
+
     return response
 
 

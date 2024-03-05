@@ -14,8 +14,7 @@ import tzlocal
 import yaml
 from timeit import default_timer as timer
 from threading import Thread
-import queue
-from time import sleep
+
 
 @api_view(['GET','POST'])
 def devices(request):
@@ -116,8 +115,6 @@ def device_detail(request, hostname):
                 device.delete()
             serializer.save()
             conn_strings={"ipaddr":device.mgmt_ipaddr, "port":device.port, 'credential':(device.username, device.secret)}
-
-
 
             def parallel_hostname():
                 global res_hostname
@@ -351,7 +348,7 @@ def acl_detail(request, hostname, name):
             activity_log("info", hostname, "ACL", "ACL %s applied to interface successfully: %s"%(name, request.data['apply_to_interface']))
         else:
             activity_log("error", hostname, "ACL", "ACL %s applied to interface failed: %s"%(name, result['acl_apply']['body']))
-
+        
         return Response(result)
     elif request.method=="DELETE":
         result=delAcl(conn_strings=conn_strings, req_to_del={"name":name})
