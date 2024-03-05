@@ -330,17 +330,25 @@ def getOspfProcessDetail(conn_strings: dict, req_to_show: dict)->dict:
     if len(response.text)>0:
         try:
             response_body=json.loads(response.text)["Cisco-IOS-XE-ospf:process-id"]
+
+            if not 'network' in response_body:
+                response_body['network']=[]
+
             if "default-information" in response_body:
                 response_body["default-information-originate"]=True
+                del response_body['default-information']
             else:
                 response_body["default-information-originate"]=False
-            del response_body["default-information"]
 
             if "redistribute" in response_body:
                 response_body["redistribute"]=list(response_body["redistribute"].keys())
+            else:
+                response_body["redistribute"]=[]
             
             if "passive-interface" in response_body:
                 response_body["passive-interface"]=response_body["passive-interface"]["interface"]
+            else:
+                response_body["passive-interface"]=[]
         except:
             response_body=json.loads(response.text)
     else:
@@ -407,7 +415,6 @@ def getAclDetail(conn_strings: dict, req_to_show: dict)->dict:
                     prefix=acl_sequence[action]["std-ace"]["ipv4-prefix"] if "ipv4-prefix" in acl_sequence[action]["std-ace"] else "any"
                     mask=acl_sequence[action]["std-ace"]["mask"] if "mask" in acl_sequence[action]["std-ace"] else None
                     sequences.append({"sequence":sequence, "action": action, "prefix": prefix, "wildcard": mask})
-                    print("adads")
                 response_body={"name":acl_data["name"], "rules":sequences}
             else:
                 response_body={"name":acl_data["name"], "rules":[]}
@@ -444,66 +451,69 @@ def getAclDetail(conn_strings: dict, req_to_show: dict)->dict:
     return {"code": response.status_code, "body": response_body}
 
 def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
-    # Edit acl entry
-    rules=[]
-    for rule in req_to_change["rules"]:
-        if rule["wildcard"]:
-            rules.append({"sequence":rule["sequence"], rule["action"]:{"std-ace":{"ipv4-prefix": rule["prefix"], "mask": rule["wildcard"]}}})
-        else:
-            rules.append({"sequence":rule["sequence"], rule["action"]:{"std-ace":{"ipv4-prefix": rule["prefix"]}}})
-    body=json.dumps({"Cisco-IOS-XE-acl:standard":{"name":req_to_change["name"],"access-list-seq-rule":rules}})
-    response_acledit=putSomethingConfig(conn_strings, "/ip/access-list/standard=%s"%(req_to_change["name"]), body)
     response={}
-    del body
-    try:
-        response["acl_edit"]={'code': response_acledit.status_code, 'body': json.loads(response_acledit.text)}
-    except Exception:
-        response["acl_edit"]={'code': response_acledit.status_code, 'body': {}}
+
+    # Edit acl entry
+    def parallel_editaclentry():
+        rules=[]
+        for rule in req_to_change["rules"]:
+            if rule["wildcard"]:
+                rules.append({"sequence":rule["sequence"], rule["action"]:{"std-ace":{"ipv4-prefix": rule["prefix"], "mask": rule["wildcard"]}}})
+            else:
+                rules.append({"sequence":rule["sequence"], rule["action"]:{"std-ace":{"ipv4-prefix": rule["prefix"]}}})
+        body=json.dumps({"Cisco-IOS-XE-acl:standard":{"name":req_to_change["name"],"access-list-seq-rule":rules}})
+        response_acledit=putSomethingConfig(conn_strings, "/ip/access-list/standard=%s"%(req_to_change["name"]), body)
+        try:
+            response["acl_edit"]={'code': response_acledit.status_code, 'body': json.loads(response_acledit.text)}
+        except Exception:
+            response["acl_edit"]={'code': response_acledit.status_code, 'body': {}}
 
     # Apply acl to interface
-    interface_config=json.loads(getSomethingConfig(conn_strings, "/interface").text)
-    for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
-        for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
-            # Delete applied acl entry
-            try:
-                if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_change['name']:
-                    del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['out']['acl']
-            except:
-                pass
+    def parallel_applyacl():
+        interface_config=json.loads(getSomethingConfig(conn_strings, "/interface").text)
+        for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
+            for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
+                # Delete applied acl entry
+                try:
+                    if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_change['name']:
+                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['out']['acl']
+                except:
+                    pass
 
-            try:
-                if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_change['name']:
-                    del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
-            except:
-                pass
+                try:
+                    if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_change['name']:
+                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
+                except:
+                    pass
 
-            # Add acl entry to interface
-            apply_to_interface_config=req_to_change['apply_to_interface']
-            for interface_name in apply_to_interface_config:
-                interface_type=""
-                interface_number=""
-                for char in interface_name:
-                    if char.isalpha():
-                        interface_type+=char
-                    elif char.isdigit():
-                        interface_number+=char
-                for direction in apply_to_interface_config[interface_name]:
-                    try:
-                        interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
-                    except KeyError:
+                # Add acl entry to interface
+                apply_to_interface_config=req_to_change['apply_to_interface']
+                for interface_name in apply_to_interface_config:
+                    interface_type=""
+                    interface_number=""
+                    for char in interface_name:
+                        if char.isalpha():
+                            interface_type+=char
+                        elif char.isdigit():
+                            interface_number+=char
+                    for direction in apply_to_interface_config[interface_name]:
                         try:
-                            interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
                             interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
                         except KeyError:
-                            interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']={}
-                            interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
-                            interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
-    body=json.dumps(interface_config)
-    response_aclapply=putSomethingConfig(conn_strings, "/interface", body)
-    try:
-        response["acl_apply"]={'code': response_aclapply.status_code, 'body': json.loads(response_aclapply.text)}
-    except Exception:
-        response["acl_apply"]={'code': response_aclapply.status_code, 'body': {}}
+                            try:
+                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
+                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
+                            except KeyError:
+                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']={}
+                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
+                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
+        body=json.dumps(interface_config)
+        response_aclapply=putSomethingConfig(conn_strings, "/interface", body)
+        try:
+            response["acl_apply"]={'code': response_aclapply.status_code, 'body': json.loads(response_aclapply.text)}
+        except Exception:
+            response["acl_apply"]={'code': response_aclapply.status_code, 'body': {}}
+    # Add thread using above function
     return response
 
 
