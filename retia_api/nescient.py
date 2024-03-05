@@ -9,7 +9,7 @@ from retia_api.elasticclient import get_netflow_data_at_nearest_time
 from retia_api.models import Detector
 from retia_api.utils import getprotobynumber
 from timeit import default_timer as timer
-
+from retia_api.logging import activity_log
 
 
 
@@ -124,15 +124,17 @@ def handle_result(j, N, data, detector_instance: Detector):
             positive_traffic = get_netflow_data_at_nearest_time(
                 timestamp, detector_instance.elastic_host, detector_instance.elastic_index)
 
-            report = "src: {}, dest: {}, dest_port: {}, L4_proto: {}, time: {}".format(
+            report = "src: {}, dest: {}, dest_port: {}, L4_proto: {}".format(
                 positive_traffic['source_ipv4_address'],
                 positive_traffic['destination_ipv4_address'],
                 positive_traffic['destination_transport_port'],
                 getprotobynumber(positive_traffic['protocol_identifier']),
-                timestamp
             )
-            print("Target: %s, action: Detection , status: [Nescient], time: %s, user: anon, message:POSITIVE %s"%(detector_instance.device.mgmt_ipaddr, datetime.now(), report))
-            
+            detection_result="Target: %s, message:POSITIVE %s"%(detector_instance.device.mgmt_ipaddr, report)
+
+            print(detection_result)
+            activity_log("warning", detector_instance.device.hostname, "detector", detection_result)
+
             ## DDoS Mitigation
             acl_name='retia_dos_mitigation'
             conn_strings={"ipaddr":detector_instance.device.mgmt_ipaddr, "port":detector_instance.device.port, 'credential':(detector_instance.device.username, detector_instance.device.secret)}
@@ -157,24 +159,18 @@ def handle_result(j, N, data, detector_instance: Detector):
                 ddos_mitigation_acl['rules'].append({"sequence": next_sequence_numbers,"action": "deny","prefix": negative_traffic['source_ipv4_address'], "wildcard":None})
                 setAclDetail(conn_strings=conn_strings, req_to_change=ddos_mitigation_acl)
 
-            log = Log(target=detector_instance.device.ip_address, action="Detection", status="[Nescient]",
-                      time=datetime.now(),
-                      user=None, messages="POSITIVE {}".format(report))
-            log.save()
+
         else:
             negative_traffic = get_netflow_data_at_nearest_time(
                 timestamp, detector_instance.elastic_host, detector_instance.elastic_index)
 
-            report = "src: {}, dest: {}, dest_port: {}, L4_proto: {}, time: {}".format(
+            report = "src: {}, dest: {}, dest_port: {}, L4_proto: {}".format(
                 negative_traffic['source_ipv4_address'],
                 negative_traffic['destination_ipv4_address'],
                 negative_traffic['destination_transport_port'],
                 getprotobynumber(negative_traffic['protocol_identifier']),
-                timestamp
             )
-            print("Target: %s, action: Detection , status: [Nescient], time: %s, user: anon, message:NEGATIVE %s"%(detector_instance.device.mgmt_ipaddr, datetime.now(), report))
+            detection_result="Target: %s, message:NEGATIVE %s"%(detector_instance.device.mgmt_ipaddr, report)
+            print(detection_result)
+            activity_log("info", detector_instance.device.hostname, "detector", detection_result)
 
-            # log = Log(target=detector_instance.device.ip_address, action="Detection", status="[Nescient]",
-            #           time=datetime.now(),
-            #           user='Anonymous', messages="NEGATIVE {}".format(report))
-            # log.save()

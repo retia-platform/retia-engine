@@ -1,7 +1,6 @@
 import json, requests
 from requests.exceptions import RequestException
 from rest_framework import status
-from apscheduler.schedulers.background import BackgroundScheduler
 from retia_api.models import *
 from datetime import datetime
 from math import ceil
@@ -751,7 +750,6 @@ def getInterfaceInThroughput(mgmt_ipaddr: str, int_name: str, start_time, end_ti
             metric_val=response_body_temp[1]['values']
             response_body_temp_appended=zero_val+metric_val
             response_body=sorted(response_body_temp_appended, key=lambda sublist: sublist[0])
-            print(len(response_body))
         else:
             response_body=json.loads(requests.get(url=target_url).text)['data']['result'][0]['values']
     except:
@@ -775,7 +773,6 @@ def getInterfaceOutThroughput(mgmt_ipaddr: str, int_name: str, start_time, end_t
             metric_val=response_body_temp[1]['values']
             response_body_temp_appended=zero_val+metric_val
             response_body=sorted(response_body_temp_appended, key=lambda sublist: sublist[0])
-            print(len(response_body))
         else:
             response_body=json.loads(requests.get(url=target_url).text)['data']['result'][0]['values']
     except:

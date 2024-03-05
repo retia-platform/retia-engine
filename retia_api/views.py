@@ -15,6 +15,7 @@ import yaml
 from timeit import default_timer as timer
 from threading import Thread
 import queue
+from time import sleep
 
 @api_view(['GET','POST'])
 def devices(request):
@@ -28,8 +29,6 @@ def devices(request):
             del devices_data[i]["username"]
             del devices_data[i]["secret"]
             del devices_data[i]["port"]
-            del devices_data[i]["created_at"]
-            del devices_data[i]["modified_at"]
             devices_data[i]['status']=device_statuses[int(getDeviceUpStatus(device[i].mgmt_ipaddr))-1]
         return Response(serializer.data)
     elif request.method=='POST':
@@ -68,7 +67,7 @@ def device_detail(request, hostname):
         device=Device.objects.get(pk=hostname)
     except Device.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
     # Connection string to device
     conn_strings={"ipaddr":device.mgmt_ipaddr, "port":device.port, 'credential':(device.username, device.secret)}
 
@@ -115,10 +114,29 @@ def device_detail(request, hostname):
             serializer.save()
             conn_strings={"ipaddr":device.mgmt_ipaddr, "port":device.port, 'credential':(device.username, device.secret)}
 
-            res_hostname=setHostname(conn_strings=conn_strings, req_to_change={"hostname":request.data["hostname"]})
-            res_loginbanner=setLoginBanner(conn_strings=conn_strings, req_to_change={"login_banner":request.data["login_banner"]})
-            res_motdbanner=setMotdBanner(conn_strings=conn_strings, req_to_change={"motd_banner":request.data["motd_banner"]})
 
+
+            def parallel_hostname():
+                global res_hostname
+                res_hostname=setHostname(conn_strings=conn_strings, req_to_change={"hostname":request.data["hostname"]})
+            def parallel_loginbanner():
+                global res_loginbanner
+                res_loginbanner=setLoginBanner(conn_strings=conn_strings, req_to_change={"login_banner":request.data["login_banner"]})
+            def parallel_motdbanner():
+                global res_motdbanner
+                res_motdbanner=setMotdBanner(conn_strings=conn_strings, req_to_change={"motd_banner":request.data["motd_banner"]})
+
+            functions=[parallel_hostname, parallel_loginbanner, parallel_motdbanner]
+            threads=[]
+            for function in functions:
+                run_thread=Thread(target=function)
+                run_thread.start()
+                threads.append(run_thread)
+
+            for thread in threads:
+                thread.join()
+
+            # return Response(data)
 
             # Change ip addr of prometheus config and reload it
             with open('./prometheus/prometheus.yml') as f:
@@ -140,6 +158,7 @@ def device_detail(request, hostname):
         else:
             activity_log("error", hostname, "device", "Device %s edit error: %s"%(hostname, serializer.errors))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
     elif request.method=='DELETE':
         # Delete ip addr from prometheus config and reload it
         with open('./prometheus/prometheus.yml') as f:
@@ -362,6 +381,9 @@ def detectors(request):
             detector_instance_sum[i]['device_type']=detector[i].device.device_type
             detector_instance_sum[i]['status']=device_statuses[int(getDeviceUpStatus(detector[i].device.mgmt_ipaddr))-1]
             detector_instance_sum[i]['mgmt_ipaddr']=detector[i].device.mgmt_ipaddr
+            detector_instance_sum[i]['created_at']=detector[i].device.modified_at
+            detector_instance_sum[i]['modified_at']=detector[i].device.modified_at
+
         return Response(detector_instance_sum)
     elif request.method=='POST':
         serializer=DetectorSerializer(data=request.data)
@@ -372,7 +394,6 @@ def detectors(request):
         else:
             activity_log("info", 'retia-engine', "detector", "Detector %s addition error: %s."%(request.data["device"], serializer.errors))
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": serializer.errors})
-
 
 @api_view(['GET', 'PUT',"DELETE"])
 def detector_detail(request, device):
@@ -398,12 +419,9 @@ def detector_detail(request, device):
 
         data['brand']=detector.device.brand
         data['device_type']=detector.device.device_type
-
         data['mgmt_ipaddr']=detector.device.mgmt_ipaddr
-        
         device_statuses=['up','down']
         data['status']=device_statuses[int(getDeviceUpStatus(detector.device.mgmt_ipaddr))-1]
-
 
         detector_data={"sync":device_sync_status, "data":data}
 
@@ -464,34 +482,33 @@ def detector_sync(request, device):
         return Response(result)
 
 @api_view(['PUT'])
-def detector_start(request, device):    
+def detector_run(request, device):    
     def detector_job(detector_instance):
         print("\n\n\n\n\n----------------------------------------------------------------------------------")
         core(get_netflow_resampled("now", detector_instance.sampling_interval, detector_instance.elastic_host, detector_instance.elastic_index), detector_instance)
-    
+
     # Check whether detector exist in database
     try:
         detector=Detector.objects.get(pk=device)
     except Detector.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+    #### Start stop pake body (struktur body di postman), get status pake get
     if request.method=='PUT':
-    #     scheduler=BackgroundScheduler()
-    #     scheduler.add_job(func=detector_job, args=[detector], trigger="cron", seconds=detector.sampling_interval, id=detector.device,max_instances=1, replace_existing=True)
-    #     scheduler.start()
         try:
+            body=request.data
             scheduler=BackgroundScheduler()
-            scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
-            scheduler.start()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+
+            if body['status']=='up':
+                scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
+                scheduler.start()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            elif body['status']=='down':
+                scheduler.remove_job(str(detector.device))
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
         except Exception as e:
-            return Response(status=status.http_500_internal_server_error, body=e)
-    # try:
-    #     scheduler=BackgroundScheduler()
-    #     scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second="*/%s"%(detector.sampling_interval), id=str(detector.device), max_instances=1, replace_existing=True)
-    #     scheduler.start()
-    # except Exception as e:
-    #     print(e)
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=e)
+
 
 @api_view(['GET'])
 def monitoring_buildinfo(request):
@@ -540,5 +557,3 @@ def log_activity(request):
             response_body[idx]['time']=logtime_local
     
         return Response(response_body)
-    
-# BUAT FUNGSI SECURITIY (username, pass encryption, write, erase)

@@ -38,7 +38,7 @@ urlpatterns = [
     path('detector', detectors),
     path('detector/<str:device>', detector_detail),
     path('detector/<str:device>/sync', detector_sync),
-    path('detector/<str:device>/start', detector_start),
+    path('detector/<str:device>/run', detector_run),
     path('monitoring/buildinfo', monitoring_buildinfo),
     path('log/activity', log_activity),
     path('api/token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
