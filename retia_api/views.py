@@ -29,7 +29,7 @@ def devices(request):
             try:
                 devices_data[i]['status']=device_statuses[int(getDeviceUpStatus(device[i].mgmt_ipaddr))-1]
             except:
-                devices_data[i]['status']=device_statuses[3]
+                devices_data[i]['status']=device_statuses[2]
         return Response(serializer.data)
     elif request.method=='POST':
         device=Device.objects.all()
