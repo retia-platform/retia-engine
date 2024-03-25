@@ -1,4 +1,3 @@
-from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,10 +8,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from retia_api.nescient import core
 from retia_api.elasticclient import get_netflow_resampled
 from retia_api.logging import activity_log
-from datetime import datetime, timezone
+from datetime import datetime
 import tzlocal
 import yaml
 from threading import Thread
+import netifaces as ni
 
 @api_view(['GET','POST'])
 def devices(request):
@@ -20,20 +20,21 @@ def devices(request):
         device=Device.objects.all()
         serializer=DeviceSerializer(instance=device, many=True)
         devices_data=serializer.data
-
-        device_statuses=['up','down', 'unknown']
+        device_statuses=['down', 'up', 'unknown']
         for i, device_data in enumerate(devices_data):
             del devices_data[i]["username"]
             del devices_data[i]["secret"]
             del devices_data[i]["port"]
             try:
-                devices_data[i]['status']=device_statuses[int(getDeviceUpStatus(device[i].mgmt_ipaddr))-1]
+                devices_data[i]['status']=device_statuses[int(getDeviceUpStatus(device[i].mgmt_ipaddr))]
             except:
                 devices_data[i]['status']=device_statuses[2]
         return Response(serializer.data)
     elif request.method=='POST':
         device=Device.objects.all()
         serializer=DeviceSerializer(data=request.data)
+        detector=Detector.objects.all()
+        conn_string={"ipaddr":request.data["mgmt_ipaddr"], "port": request.data["port"],'credential':(request.data["username"], request.data["secret"])}
         if serializer.is_valid():
             # Add ip addr to prometheus config and reload it
             with open('./prometheus/prometheus.yml') as f:
@@ -45,16 +46,19 @@ def devices(request):
                     yaml.safe_dump(prometheus_config, stream=f)
                 requests.post(url='http://localhost:9090/-/reload')
 
-            conn=check_device_connection(conn_strings={"ipaddr":request.data["mgmt_ipaddr"], "port": request.data["port"],'credential':(request.data["username"], request.data["secret"])})
-            serializer.save()
 
+            conn=check_device_connection(conn_strings=conn_string)
+            serializer.save()
+            # Add SNMP-server config to device
             if not conn.status_code == 200:
                 activity_log("error", request.data["hostname"], "device", "Device added but detected offline: %s"%(conn.text))
                 return Response(status=conn.status_code, data={"info":"device added but detected offline"})            
-            
-
-            activity_log("info", request.data["hostname"], "device", "Device %s added successfully"%(request.data["hostname"]))
-            return Response(status=status.HTTP_201_CREATED)
+            else:
+                reta_engine_ipaddr=ni.ifaddresses('enp0s3')[ni.AF_INET][0]['addr']
+                body=json.dumps({"Cisco-IOS-XE-native:snmp-server": {"Cisco-IOS-XE-snmp:community": [{"name": "public","RO": [None]}],"Cisco-IOS-XE-snmp:host": [{"ip-address": reta_engine_ipaddr,"community-or-user": "public","version": "2c"}]}})
+                putSomethingConfig(conn_strings=conn_string, path='/snmp-server', body=body)
+                activity_log("info", request.data["hostname"], "device", "Device %s added successfully"%(request.data["hostname"]))
+                return Response(status=status.HTTP_201_CREATED)
         else:
             activity_log("error", request.data["hostname"], "device", "Device %s creation error: %s."%(request.data['hostname'], serializer.errors))
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": serializer.errors})
