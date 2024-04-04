@@ -486,6 +486,11 @@ def detector_run(request, device):
         print("\n\n\n\n\n----------------------------------------------------------------------------------")
         core(get_netflow_resampled("now", detector_instance.sampling_interval, detector_instance.elastic_host, detector_instance.elastic_index), detector_instance)
 
+    try:
+        scheduler.start()
+    except:
+        pass
+
     # Check whether detector exist in database
     try:
         detector=Detector.objects.get(pk=device)
@@ -496,13 +501,12 @@ def detector_run(request, device):
         try:
             body=request.data
 
-            if body['status']=='run':
-                scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
-                scheduler.start()
+            if body['status']=='up':
+                scheduler.add_job(func=detector_job, args=[detector], trigger="interval", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            elif body['status']=='stop':
-                scheduler.remove_job(id=str(detector.device))
-                # print(scheduler.get_jobs())
+            elif body['status']=='down':
+                scheduler.remove_job(str(detector.device))
+                print(scheduler.get_jobs())
                 return Response(status=status.HTTP_204_NO_CONTENT)
 
         except Exception as e:
