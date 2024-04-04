@@ -4,7 +4,6 @@ from rest_framework import status
 from .models import Device, Detector
 from .serializers import DeviceSerializer, DetectorSerializer, ActivityLogSerializer
 from retia_api.operation import *
-from apscheduler.schedulers.background import BackgroundScheduler
 from retia_api.nescient import core
 from retia_api.elasticclient import get_netflow_resampled
 from retia_api.logging import activity_log
@@ -13,6 +12,7 @@ import tzlocal
 import yaml
 from threading import Thread
 import netifaces as ni
+from retia_api.scheduler import scheduler
 
 @api_view(['GET','POST'])
 def devices(request):
@@ -496,14 +496,14 @@ def detector_run(request, device):
     if request.method=='PUT':
         try:
             body=request.data
-            scheduler=BackgroundScheduler()
 
-            if body['status']=='up':
+            if body['status']=='run':
                 scheduler.add_job(func=detector_job, args=[detector], trigger="cron", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
                 scheduler.start()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            elif body['status']=='down':
-                scheduler.remove_job(str(detector.device))
+            elif body['status']=='stop':
+                scheduler.remove_job(id=str(detector.device))
+                print(scheduler.get_jobs())
                 return Response(status=status.HTTP_204_NO_CONTENT)
 
         except Exception as e:

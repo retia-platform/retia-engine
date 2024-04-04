@@ -155,6 +155,16 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+SCHEDULER_CONFIG = {
+    "apscheduler.jobstores.default": {
+        "class": "django_apscheduler.jobstores:DjangoJobStore"
+    },
+    'apscheduler.executors.processpool': {
+        "class": "apscheduler.executors.pool.ThreadPoolExecutor"
+    },
+}
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 

@@ -1,14 +1,4 @@
-import logging
-
 from apscheduler.schedulers.background import BackgroundScheduler
+import retia_api.settings
 
-from autonetapi import settings
-
-scheduler = BackgroundScheduler(settings.SCHEDULER_CONFIG)
-
-
-def start():
-    if settings.DEBUG:
-        logging.basicConfig()
-        logging.getLogger('apscheduler').setLevel(logging.DEBUG)
-    scheduler.start()
+scheduler = BackgroundScheduler(retia_api.settings.SCHEDULER_CONFIG)

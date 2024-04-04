@@ -30,8 +30,8 @@ class Detector(models.Model):
 
 class ActivityLog(models.Model):
     time = models.DateTimeField(null=True)
-    severity = models.CharField(max_length=255, blank=True)
-    instance = models.CharField(max_length=255, blank=True)
+    severity = models.CharField(max_length=10, blank=True)
+    instance = models.CharField(max_length=63, blank=True)
     category = models.CharField(max_length=10, blank=True)
     messages = models.CharField(max_length=255, blank=True)
 
