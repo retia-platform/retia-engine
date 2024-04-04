@@ -33,7 +33,6 @@ def devices(request):
     elif request.method=='POST':
         device=Device.objects.all()
         serializer=DeviceSerializer(data=request.data)
-        detector=Detector.objects.all()
         conn_string={"ipaddr":request.data["mgmt_ipaddr"], "port": request.data["port"],'credential':(request.data["username"], request.data["secret"])}
         if serializer.is_valid():
             # Add ip addr to prometheus config and reload it
@@ -381,8 +380,8 @@ def detectors(request):
             detector_instance_sum[i]['device_type']=detector[i].device.device_type
             detector_instance_sum[i]['status']=device_statuses[int(getDeviceUpStatus(detector[i].device.mgmt_ipaddr))-1]
             detector_instance_sum[i]['mgmt_ipaddr']=detector[i].device.mgmt_ipaddr
-            detector_instance_sum[i]['created_at']=detector[i].device.modified_at
-            detector_instance_sum[i]['modified_at']=detector[i].device.modified_at
+            detector_instance_sum[i]['created_at']=detector[i].created_at
+            detector_instance_sum[i]['modified_at']=detector[i].modified_at
 
         return Response(detector_instance_sum)
     elif request.method=='POST':
@@ -503,7 +502,7 @@ def detector_run(request, device):
                 return Response(status=status.HTTP_204_NO_CONTENT)
             elif body['status']=='stop':
                 scheduler.remove_job(id=str(detector.device))
-                print(scheduler.get_jobs())
+                # print(scheduler.get_jobs())
                 return Response(status=status.HTTP_204_NO_CONTENT)
 
         except Exception as e:
