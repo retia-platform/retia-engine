@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Device, Detector
+from .models import Device, Detector, ActivityLog
 from .serializers import DeviceSerializer, DetectorSerializer, ActivityLogSerializer
 from retia_api.operation import *
 from retia_api.nescient import core
@@ -547,10 +547,12 @@ def interface_out_throughput(request, hostname, name):
 @api_view(['GET'])
 def log_activity(request):
     if request.method=='GET':
-        start_time=request.query_params['start_time']
-        end_time=request.query_params['end_time']
-
-        activitylog=ActivityLog.objects.filter(time__gte=start_time, time__lte=end_time).order_by("-time")
+        if "start_time" in request.query_params:
+            start_time=request.query_params['start_time']
+            end_time=request.query_params['end_time']
+            activitylog=ActivityLog.objects.filter(time__gte=start_time, time__lte=end_time).order_by("-time")
+        else:
+            activitylog=ActivityLog.objects.all()
         serializer=ActivityLogSerializer(instance=activitylog, many=True)
         response_body=serializer.data
 
