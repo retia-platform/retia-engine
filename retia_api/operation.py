@@ -667,40 +667,53 @@ def check_device_detector_config(conn_strings:dict, req_to_check:dict)->dict:
         return {"synced": synced, "status":{"flow_record":record_config_current_status, "flow_exporter":exporter_config_current_status, "flow_monitor":monitor_config_current_status, "applied_to_interface":flow_monitor_applied_to_correct_interface}}
 
 def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
-    # Sync flow record, exporter, monitor
-    interface_type=""
-    interface_number=""
-    for char in req_to_change["device_interface_to_filebeat"]:
-        if char.isalpha():
-            interface_type+=char
-        elif char.isdigit():
-            interface_number+=char
-    body=json.dumps({"Cisco-IOS-XE-native:flow":{'Cisco-IOS-XE-flow:record': [{'name': 'RETIA_RECORD', 'collect': {'application': {'name': {}}, 'counter': {'bytes': {}, 'packets': {}}, 'interface': {'output': {}}, 'routing': {'destination': {'as': {}}, 'source': {'as': {}}}, 'timestamp': {'sys-uptime': {'first': [None], 'last': [None]}}}, 'description': 'USED FOR RETIA, DO NOT CHANGE', 'match': {'interface': {'input': {}}, 'ipv4': {'destination': {'address': [None]}, 'protocol': [None], 'source': {'address': [None]}, 'tos': [None]}, 'transport': {'destination-port': [None], 'source-port': [None]}}}], 'Cisco-IOS-XE-flow:exporter': [{'name': 'RETIA_EXPORTER', 'description': 'USED FOR RETIA, DO NOT CHANGE', 'destination': {'ipdest': {'ip': req_to_change["filebeat_host"]}}, 'option': {'application-attributes': {'timeout': 300}, 'application-table': {'timeout': 60}}, 'source': {str(interface_type): str(interface_number)}, 'template': {'data': {'timeout': 60}}, 'transport': {'udp': req_to_change["filebeat_port"]}}],'Cisco-IOS-XE-flow:monitor': [{'name': 'RETIA_MONITOR', 'cache': {'timeout': {'active': 60}}, 'description': 'USED FOR RETIA, DO NOT CHANGE', 'exporter': [{'name': 'RETIA_EXPORTER'}], 'record': {'type': 'RETIA_RECORD'}}]}}, indent=2)
-    response_flow_config=putSomethingConfig(conn_strings, "/Cisco-IOS-XE-native:flow", body)
-    del body
+    # Sync flow record, exporter, 
+    def parallel_flow():
+        global response_flow_config
+        interface_type=""
+        interface_number=""
+        for char in req_to_change["device_interface_to_filebeat"]:
+            if char.isalpha():
+                interface_type+=char
+            elif char.isdigit():
+                interface_number+=char
+        body=json.dumps({"Cisco-IOS-XE-native:flow":{'Cisco-IOS-XE-flow:record': [{'name': 'RETIA_RECORD', 'collect': {'application': {'name': {}}, 'counter': {'bytes': {}, 'packets': {}}, 'interface': {'output': {}}, 'routing': {'destination': {'as': {}}, 'source': {'as': {}}}, 'timestamp': {'sys-uptime': {'first': [None], 'last': [None]}}}, 'description': 'USED FOR RETIA, DO NOT CHANGE', 'match': {'interface': {'input': {}}, 'ipv4': {'destination': {'address': [None]}, 'protocol': [None], 'source': {'address': [None]}, 'tos': [None]}, 'transport': {'destination-port': [None], 'source-port': [None]}}}], 'Cisco-IOS-XE-flow:exporter': [{'name': 'RETIA_EXPORTER', 'description': 'USED FOR RETIA, DO NOT CHANGE', 'destination': {'ipdest': {'ip': req_to_change["filebeat_host"]}}, 'option': {'application-attributes': {'timeout': 300}, 'application-table': {'timeout': 60}}, 'source': {str(interface_type): str(interface_number)}, 'template': {'data': {'timeout': 60}}, 'transport': {'udp': req_to_change["filebeat_port"]}}],'Cisco-IOS-XE-flow:monitor': [{'name': 'RETIA_MONITOR', 'cache': {'timeout': {'active': 60}}, 'description': 'USED FOR RETIA, DO NOT CHANGE', 'exporter': [{'name': 'RETIA_EXPORTER'}], 'record': {'type': 'RETIA_RECORD'}}]}}, indent=2)
+        response_flow_config=putSomethingConfig(conn_strings, "/Cisco-IOS-XE-native:flow", body)
 
 
     # Sync apply flow to interface
-    ## Delete all flow in all interface
-    interfaces_current=getSomethingConfig(conn_strings, "/interface")
-    interfaces_current_data=json.loads(interfaces_current.text)['Cisco-IOS-XE-native:interface']
-    for interface_types in interfaces_current_data:
-        for interface in interfaces_current_data[interface_types]:
-            try:
-                delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_type, interface["name"]))
-            except:
-                pass
+    def apply_flow():
+        global response_interface_flow_config
+        ## Delete all flow in all interface
+        interfaces_current=getSomethingConfig(conn_strings, "/interface")
+        interfaces_current_data=json.loads(interfaces_current.text)['Cisco-IOS-XE-native:interface']
+        for interface_types in interfaces_current_data:
+            for interface in interfaces_current_data[interface_types]:
+                try:
+                    delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_type, interface["name"]))
+                except:
+                    pass
 
-    ## Add flow to correct interface
-    interface_type=""
-    interface_number=""
-    for char in req_to_change["device_interface_to_server"]:
-        if char.isalpha():
-            interface_type+=char
-        elif char.isdigit():
-            interface_number+=char
-    body=json.dumps({ "Cisco-IOS-XE-flow:flow": { "monitor": [ { "name": "RETIA_MONITOR", "output": [None] } ] } })
-    response_interface_flow_config=putSomethingConfig(conn_strings, "/interface/%s=%s/ip/flow"%(interface_type, interface_number), body)
+        ## Add flow to correct interface
+        interface_type=""
+        interface_number=""
+        for char in req_to_change["device_interface_to_server"]:
+            if char.isalpha():
+                interface_type+=char
+            elif char.isdigit():
+                interface_number+=char
+        body=json.dumps({ "Cisco-IOS-XE-flow:flow": { "monitor": [ { "name": "RETIA_MONITOR", "output": [None] } ] } })
+        response_interface_flow_config=putSomethingConfig(conn_strings, "/interface/%s=%s/ip/flow"%(interface_type, interface_number), body)
+
+    functions=[parallel_flow, apply_flow]
+    threads=[]
+    for function in functions:
+        run_thread=Thread(target=function)
+        run_thread.start()
+        threads.append(run_thread)
+
+    for thread in threads:
+        thread.join()
 
 
     if response_flow_config.status_code==204 and response_interface_flow_config.status_code==204:
