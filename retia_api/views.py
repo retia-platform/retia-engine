@@ -13,6 +13,8 @@ import yaml
 from threading import Thread
 import netifaces as ni
 from retia_api.scheduler import scheduler
+from apscheduler.triggers.interval import IntervalTrigger
+
 
 @api_view(['GET','POST'])
 def devices(request):
@@ -370,19 +372,19 @@ def detectors(request):
     if request.method=='GET':
         serializer=DetectorSerializer(instance=detector, many=True)
         detector_instances=serializer.data
-
-        device_statuses=['up','down']
-
         detector_instance_sum=[{}]
         for i, detector_instance in enumerate(detector_instances):
+            detector_instance_sum.append({})
             detector_instance_sum[i]['device']=detector_instance["device"]
             detector_instance_sum[i]['brand']=detector[i].device.brand
             detector_instance_sum[i]['device_type']=detector[i].device.device_type
-            detector_instance_sum[i]['status']=device_statuses[int(getDeviceUpStatus(detector[i].device.mgmt_ipaddr))-1]
             detector_instance_sum[i]['mgmt_ipaddr']=detector[i].device.mgmt_ipaddr
             detector_instance_sum[i]['created_at']=detector[i].created_at
             detector_instance_sum[i]['modified_at']=detector[i].modified_at
-
+            if getDeviceUpStatus(detector[i].device.mgmt_ipaddr)=="1" and not type(scheduler.get_job(str(detector[i].device)))==None:
+                detector_instance_sum[i]['status']="up"
+            else:
+                detector_instance_sum[i]['status']="down"
         return Response(detector_instance_sum)
     elif request.method=='POST':
         serializer=DetectorSerializer(data=request.data)
@@ -419,9 +421,11 @@ def detector_detail(request, device):
         data['brand']=detector.device.brand
         data['device_type']=detector.device.device_type
         data['mgmt_ipaddr']=detector.device.mgmt_ipaddr
-        device_statuses=['up','down']
-        data['status']=device_statuses[int(getDeviceUpStatus(detector.device.mgmt_ipaddr))-1]
 
+        if getDeviceUpStatus(detector.device.mgmt_ipaddr)=="1" and not type(scheduler.get_job(str(device)))==None:
+            data['status']="up"
+        else:
+            data['status']="down"
         detector_data={"sync":device_sync_status, "data":data}
 
         return Response(detector_data)
@@ -486,11 +490,6 @@ def detector_run(request, device):
         print("\n\n\n\n\n----------------------------------------------------------------------------------")
         core(get_netflow_resampled("now", detector_instance.sampling_interval, detector_instance.elastic_host, detector_instance.elastic_index), detector_instance)
 
-    try:
-        scheduler.start()
-    except:
-        pass
-
     # Check whether detector exist in database
     try:
         detector=Detector.objects.get(pk=device)
@@ -500,17 +499,26 @@ def detector_run(request, device):
     if request.method=='PUT':
         try:
             body=request.data
-
             if body['status']=='up':
-                scheduler.add_job(func=detector_job, args=[detector], trigger="interval", second=detector.sampling_interval, id=str(detector.device), max_instances=1, replace_existing=True)
+                scheduler.add_job(func=detector_job, args=[detector], trigger=IntervalTrigger(seconds=detector.sampling_interval), id=str(detector.device), max_instances=1, replace_existing=True)
+                activity_log("info","retia-engine", "detector", "Detector device %s set to running."%(str(detector.device)))   
                 return Response(status=status.HTTP_204_NO_CONTENT)
+                
             elif body['status']=='down':
                 scheduler.remove_job(str(detector.device))
-                print(scheduler.get_jobs())
-                return Response(status=status.HTTP_204_NO_CONTENT)
-
+                activity_log("info","retia-engine", "detector", "Detector device %s is stopped."%(str(detector.device)))                
+                return Response(status=status.HTTP_204_NO_CONTENT)          
         except Exception as e:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=e)
+            # fix error message format
+            err_=str(e)
+            error=""
+            for err in err_:
+                if "'" == err:
+                    pass
+                else:
+                    error+=err
+            activity_log("info","retia-engine", "detector", str(error))
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error":error})
 
 
 @api_view(['GET'])

@@ -564,14 +564,33 @@ def delAcl(conn_strings: dict, req_to_del:dict)->list:
 def check_device_detector_config(conn_strings:dict, req_to_check:dict)->dict:
     # Check flow record, exporter, monitor configuration
     conn_check=check_device_connection(conn_strings=conn_strings)
-    record_config_current=getSomethingConfig(conn_strings, "/flow/record=RETIA_RECORD")
-    exporter_config_current=getSomethingConfig(conn_strings, "/flow/exporter=RETIA_EXPORTER")
-    monitor_config_current=getSomethingConfig(conn_strings, "/flow/monitor=RETIA_MONITOR")
-    interfaces_current=getSomethingConfig(conn_strings, "/interface")
 
     if conn_check.status_code==404:
         return {"synced":None, "status":"Device offline"}
-    elif record_config_current.status_code==404 or exporter_config_current==404 or monitor_config_current==404 or interfaces_current==404:
+    def parallel_record():
+        global record_config_current
+        record_config_current=getSomethingConfig(conn_strings, "/flow/record=RETIA_RECORD")
+    def paralell_exporter():
+        global exporter_config_current
+        exporter_config_current=getSomethingConfig(conn_strings, "/flow/exporter=RETIA_EXPORTER")
+    def parallel_monitor():
+        global monitor_config_current
+        monitor_config_current=getSomethingConfig(conn_strings, "/flow/monitor=RETIA_MONITOR")
+    def parallel_interface():
+        global interfaces_current
+        interfaces_current=getSomethingConfig(conn_strings, "/interface")
+
+    functions=[parallel_record, paralell_exporter, parallel_monitor, parallel_interface]
+    threads=[]
+    for function in functions:
+        run_thread=Thread(target=function)
+        run_thread.start()
+        threads.append(run_thread)
+
+    for thread in threads:
+        thread.join()
+
+    if record_config_current.status_code==404 or exporter_config_current==404 or monitor_config_current==404 or interfaces_current==404:
         return {"synced": None, "status":{"error":"Device not configured for netflow"}}
     else:
         if record_config_current.status_code==200:

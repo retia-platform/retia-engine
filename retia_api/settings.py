@@ -154,8 +154,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-
+SCHEDULER_AUTOSTART = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
