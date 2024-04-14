@@ -372,18 +372,14 @@ def detectors(request):
     if request.method=='GET':
         serializer=DetectorSerializer(instance=detector, many=True)
         detector_instances=serializer.data
-        detector_instance_sum=[{}]
+        detector_instance_sum=[]
         for i, detector_instance in enumerate(detector_instances):
-            detector_instance_sum[i]['device']=detector_instance["device"]
-            detector_instance_sum[i]['brand']=detector[i].device.brand
-            detector_instance_sum[i]['device_type']=detector[i].device.device_type
-            detector_instance_sum[i]['mgmt_ipaddr']=detector[i].device.mgmt_ipaddr
-            detector_instance_sum[i]['created_at']=detector[i].created_at
-            detector_instance_sum[i]['modified_at']=detector[i].modified_at
+            temp={"device":detector_instance["device"], "brand":detector[i].device.brand, "device_type":detector[i].device.device_type, "mgmt_ipaddr":detector[i].device.mgmt_ipaddr, "created_at":detector[i].created_at, "modified_at":detector[i].modified_at}
             if getDeviceUpStatus(detector[i].device.mgmt_ipaddr)=="1" and not type(scheduler.get_job(str(detector[i].device)))==None:
-                detector_instance_sum[i]['status']="up"
+                temp['status']="up"
             else:
-                detector_instance_sum[i]['status']="down"
+                temp['status']="down"
+            detector_instance_sum.append(temp)
         return Response(detector_instance_sum)
     elif request.method=='POST':
         serializer=DetectorSerializer(data=request.data)
