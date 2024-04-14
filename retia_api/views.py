@@ -374,7 +374,6 @@ def detectors(request):
         detector_instances=serializer.data
         detector_instance_sum=[{}]
         for i, detector_instance in enumerate(detector_instances):
-            detector_instance_sum.append({})
             detector_instance_sum[i]['device']=detector_instance["device"]
             detector_instance_sum[i]['brand']=detector[i].device.brand
             detector_instance_sum[i]['device_type']=detector[i].device.device_type
