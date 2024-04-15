@@ -480,7 +480,6 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
         body=json.dumps({"Cisco-IOS-XE-acl:standard":{"name":req_to_change["name"],"access-list-seq-rule":rules}})
         response_acledit=putSomethingConfig(conn_strings, "/ip/access-list/standard=%s"%(req_to_change["name"]), body)
 
-
     # Apply acl to interface
     def parallel_applyacl():
         global response_aclapply
@@ -537,8 +536,11 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
 
     for thread in threads:
         thread.join()
-    if response_acledit==204 and response_aclapply==204:
-        return {"code":status.HTTP_204_NO_CONTENT}
+    print(response_acledit.status_code)
+    if response_acledit.status_code==204 and response_aclapply.status_code==204:
+        return {"code":status.HTTP_204_NO_CONTENT, "body": {}}
+    elif response_acledit.status_code==404 or response_aclapply.status_code==404:
+        return {"code":status.HTTP_404_NOT_FOUND, "body": {}}
     else:
         try:
             response_body_acledit=json.loads(response_acledit.text)
@@ -549,7 +551,7 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
             response_body_aclapply=json.loads(response_aclapply.text)
         except:
             response_body_aclapply={}
-        return {"code": status.HTTP_404_NOT_FOUND, "body": {"acledit":response_body_acledit, "aclapply":response_body_aclapply}}
+        return {"code": status.HTTP_500_INTERNAL_SERVER_ERROR, "body": {"acledit":response_body_acledit, "aclapply":response_body_aclapply}}
 
 
 def delAcl(conn_strings: dict, req_to_del:dict)->list:
@@ -579,7 +581,9 @@ def delAcl(conn_strings: dict, req_to_del:dict)->list:
         response_aclapply_delete=response_acldelete
 
     if response_acldelete.status_code==204 and response_aclapply_delete.status_code==204:
-        return {"code":status.HTTP_204_NO_CONTENT}
+        return {"code":status.HTTP_204_NO_CONTENT, "body":{}}
+    elif response_acldelete.status_code==404 or response_aclapply_delete.status_code==404:
+        return {"code":status.HTTP_404_NOT_FOUND, "body":{}}
     else:
         try:
             response_body_acldelete=json.loads(response_acldelete.text)
@@ -591,7 +595,7 @@ def delAcl(conn_strings: dict, req_to_del:dict)->list:
         except Exception:
             response_body_aclapply_delete={}
 
-        return {"code": status.HTTP_404_NOT_FOUND, "body":{"acldelete": response_body_acldelete, "aclapply delete": response_body_aclapply_delete}}
+        return {"code": status.HTTP_500_INTERNAL_SERVER_ERROR, "body":{"acldelete": response_body_acldelete, "aclapply delete": response_body_aclapply_delete}}
     
     
 def check_device_detector_config(conn_strings:dict, req_to_check:dict)->dict:
@@ -700,7 +704,7 @@ def check_device_detector_config(conn_strings:dict, req_to_check:dict)->dict:
         return {"synced": synced, "status":{"flow_record":record_config_current_status, "flow_exporter":exporter_config_current_status, "flow_monitor":monitor_config_current_status, "applied_to_interface":flow_monitor_applied_to_correct_interface}}
 
 def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
-    # Sync flow record, exporter, 
+    # Sync flow record, exporter
     def parallel_flow():
         global response_flow_config
         interface_type=""
@@ -713,7 +717,6 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
         body=json.dumps({"Cisco-IOS-XE-native:flow":{'Cisco-IOS-XE-flow:record': [{'name': 'RETIA_RECORD', 'collect': {'application': {'name': {}}, 'counter': {'bytes': {}, 'packets': {}}, 'interface': {'output': {}}, 'routing': {'destination': {'as': {}}, 'source': {'as': {}}}, 'timestamp': {'sys-uptime': {'first': [None], 'last': [None]}}}, 'description': 'USED FOR RETIA, DO NOT CHANGE', 'match': {'interface': {'input': {}}, 'ipv4': {'destination': {'address': [None]}, 'protocol': [None], 'source': {'address': [None]}, 'tos': [None]}, 'transport': {'destination-port': [None], 'source-port': [None]}}}], 'Cisco-IOS-XE-flow:exporter': [{'name': 'RETIA_EXPORTER', 'description': 'USED FOR RETIA, DO NOT CHANGE', 'destination': {'ipdest': {'ip': req_to_change["filebeat_host"]}}, 'option': {'application-attributes': {'timeout': 300}, 'application-table': {'timeout': 60}}, 'source': {str(interface_type): str(interface_number)}, 'template': {'data': {'timeout': 60}}, 'transport': {'udp': req_to_change["filebeat_port"]}}],'Cisco-IOS-XE-flow:monitor': [{'name': 'RETIA_MONITOR', 'cache': {'timeout': {'active': 60}}, 'description': 'USED FOR RETIA, DO NOT CHANGE', 'exporter': [{'name': 'RETIA_EXPORTER'}], 'record': {'type': 'RETIA_RECORD'}}]}}, indent=2)
         response_flow_config=putSomethingConfig(conn_strings, "/Cisco-IOS-XE-native:flow", body)
 
-
     # Sync apply flow to interface
     def parallel_apply_flow():
         global response_interface_flow_config
@@ -723,7 +726,7 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
             interfaces_current_data=json.loads(interfaces_current.text)['Cisco-IOS-XE-native:interface']
             for interface_types in interfaces_current_data:
                 for interface in interfaces_current_data[interface_types]:
-                    response_interface_flow_config=delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_type, interface["name"]))
+                    delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_types, interface["name"]))
         else:
             response_interface_flow_config=interfaces_current
 
@@ -738,7 +741,7 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
                 interface_number+=char
         body=json.dumps({ "Cisco-IOS-XE-flow:flow": { "monitor": [ { "name": "RETIA_MONITOR", "output": [None] } ] } })
         response_interface_flow_config=putSomethingConfig(conn_strings, "/interface/%s=%s/ip/flow"%(interface_type, interface_number), body)
-
+    
     functions=[parallel_flow, parallel_apply_flow]
     threads=[]
     for function in functions:
@@ -750,7 +753,7 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
         thread.join()
 
     if response_flow_config.status_code==204 and response_interface_flow_config.status_code==204:
-        return {"code":status.HTTP_204_NO_CONTENT}
+        return {"code":status.HTTP_204_NO_CONTENT, "body":{}}
     else:
         try:
             response_body_flow_config=json.loads(response_flow_config.text)
@@ -762,7 +765,7 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
         except:
             response_body_interface_flow_config={}
 
-        return {"code":status.HTTP_404_NOT_FOUND, "body":{"flow_config":response_body_flow_config, "flow_interface_config": response_body_interface_flow_config}}
+        return {"code":status.HTTP_500_INTERNAL_SERVER_ERROR, "body":{"flow_config":response_body_flow_config, "flow_interface_config": response_body_interface_flow_config}}
 
 def del_device_detector_config(conn_strings:dict)->dict:
     # Delete all flow in all interface
@@ -791,7 +794,7 @@ def del_device_detector_config(conn_strings:dict)->dict:
         except:
             response_body_flow_del={}
 
-        return {"code":status.HTTP_404_NOT_FOUND, "body":{"flow_config":response_body_interface_flow_del, "flow_interface_config": response_body_flow_del}}
+        return {"code":status.HTTP_500_INTERNAL_SERVER_ERROR, "body":{"flow_config":response_body_interface_flow_del, "flow_interface_config": response_body_flow_del}}
 
 
 # Monitoring node operation

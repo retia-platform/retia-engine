@@ -353,6 +353,9 @@ def acl_detail(request, hostname, name):
 
         if result["code"] == 200  or result["code"]==204:
             activity_log("info", hostname, "ACL", "ACL %s deleted."%(name))
+
+        elif result["code"]==404:
+            activity_log("error", 'retia-engine', "ACL", "ACL %s not found."%(name))
         else:
             activity_log("error", hostname, "ACL", "ACL %s deletion error: %s."%(name, result['body']))
 
@@ -426,7 +429,7 @@ def detector_detail(request, device):
                     detector.delete()
                 else:
                     activity_log("error", 'retia-engine', "detector", "Detector %s edit error: %s."%(device, device_operation_result['body']))
-                    return Response(data={"error":device_operation_result["body"]})
+                    return Response(data=device_operation_result)
             serializer.save()
             activity_log("info", 'retia-engine', "detector", "Detector %s edited successfully."%(device))
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -440,6 +443,9 @@ def detector_detail(request, device):
             detector.delete()
             activity_log("error", 'retia-engine', "detector", "Detector %s deleted successfully."%(device))
             return Response(status=status.HTTP_204_NO_CONTENT)
+        elif device_operation_result["code"]==404:
+            activity_log("error", 'retia-engine', "detector", "Detector %s not found."%(device))
+            return Response(status=status.HTTP_404_NOT_FOUND)
         else:
             activity_log("error", 'retia-engine', "detector", "Detector %s deletion error: %s."%(device, device_operation_result))
             return Response(data=device_operation_result)
