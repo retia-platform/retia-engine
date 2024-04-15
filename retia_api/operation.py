@@ -72,14 +72,31 @@ def putSomethingConfig(conn_strings: dict, path: str, body: str):
         return err
 
 def postSomethingConfig(conn_strings: dict, path: str, body: str):
-    target_url="https://%s:%s/restconf/data/Cisco-IOS-XE-native:native%s"%(conn_strings["ipaddr"], conn_strings["port"], path)
-    return requests.post(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, data=body, verify=False, timeout=5)
+    class response_custom:
+        def __init__(self, err_code, err_text):
+            self.status_code=err_code
+            self.text=err_text
 
+    try:
+        target_url="https://%s:%s/restconf/data/Cisco-IOS-XE-native:native%s"%(conn_strings["ipaddr"], conn_strings["port"], path)
+        return requests.post(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, data=body, verify=False, timeout=5)
+    except requests.exceptions.ConnectionError:
+        err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
+        return err
+    
 def delSomethingConfig(conn_strings: dict, path: str):
-    target_url="https://%s:%s/restconf/data/Cisco-IOS-XE-native:native%s"%(conn_strings["ipaddr"], conn_strings["port"], path)
-    return requests.delete(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, timeout=5)
-
-
+    class response_custom:
+        def __init__(self, err_code, err_text):
+            self.status_code=err_code
+            self.text=err_text
+            
+    try:
+        target_url="https://%s:%s/restconf/data/Cisco-IOS-XE-native:native%s"%(conn_strings["ipaddr"], conn_strings["port"], path)
+        return requests.delete(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, timeout=5)
+    except requests.exceptions.ConnectionError:
+        err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
+        return err
+    
 def getVersion(conn_strings: dict)->dict:
     response=getSomethingConfig(conn_strings, "/version")
     if len(response.text)>0:
@@ -451,10 +468,9 @@ def getAclDetail(conn_strings: dict, req_to_show: dict)->dict:
     return {"code": response.status_code, "body": response_body}
 
 def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
-    response={}
-
     # Edit acl entry
     def parallel_editaclentry():
+        global response_acledit
         rules=[]
         for rule in req_to_change["rules"]:
             if rule["wildcard"]:
@@ -463,56 +479,54 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
                 rules.append({"sequence":rule["sequence"], rule["action"]:{"std-ace":{"ipv4-prefix": rule["prefix"]}}})
         body=json.dumps({"Cisco-IOS-XE-acl:standard":{"name":req_to_change["name"],"access-list-seq-rule":rules}})
         response_acledit=putSomethingConfig(conn_strings, "/ip/access-list/standard=%s"%(req_to_change["name"]), body)
-        try:
-            response["acl_edit"]={'code': response_acledit.status_code, 'body': json.loads(response_acledit.text)}
-        except Exception:
-            response["acl_edit"]={'code': response_acledit.status_code, 'body': {}}
+
 
     # Apply acl to interface
     def parallel_applyacl():
-        interface_config=json.loads(getSomethingConfig(conn_strings, "/interface").text)
-        for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
-            for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
-                # Delete applied acl entry
-                try:
-                    if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_change['name']:
-                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['out']['acl']
-                except:
-                    pass
+        global response_aclapply
+        interface_config_res=getSomethingConfig(conn_strings, "/interface")
+        if interface_config_res.status_code==200:
+            interface_config=json.loads(interface_config_res.text)
+            for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
+                for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
+                    # Delete applied acl entry
+                    try:
+                        if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_change['name']:
+                            del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['out']['acl']
+                    except:
+                        pass
 
-                try:
-                    if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_change['name']:
-                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
-                except:
-                    pass
+                    try:
+                        if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_change['name']:
+                            del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
+                    except:
+                        pass
 
-                # Add acl entry to interface
-                apply_to_interface_config=req_to_change['apply_to_interface']
-                for interface_name in apply_to_interface_config:
-                    interface_type=""
-                    interface_number=""
-                    for char in interface_name:
-                        if char.isalpha():
-                            interface_type+=char
-                        elif char.isdigit():
-                            interface_number+=char
-                    for direction in apply_to_interface_config[interface_name]:
-                        try:
-                            interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
-                        except KeyError:
+                    # Add acl entry to interface
+                    apply_to_interface_config=req_to_change['apply_to_interface']
+                    for interface_name in apply_to_interface_config:
+                        interface_type=""
+                        interface_number=""
+                        for char in interface_name:
+                            if char.isalpha():
+                                interface_type+=char
+                            elif char.isdigit():
+                                interface_number+=char
+                        for direction in apply_to_interface_config[interface_name]:
                             try:
-                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
                                 interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
                             except KeyError:
-                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']={}
-                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
-                                interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
-        body=json.dumps(interface_config)
-        response_aclapply=putSomethingConfig(conn_strings, "/interface", body)
-        try:
-            response["acl_apply"]={'code': response_aclapply.status_code, 'body': json.loads(response_aclapply.text)}
-        except Exception:
-            response["acl_apply"]={'code': response_aclapply.status_code, 'body': {}}
+                                try:
+                                    interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
+                                    interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
+                                except KeyError:
+                                    interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']={}
+                                    interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group']={}
+                                    interface_config["Cisco-IOS-XE-native:interface"][interface_type][int(interface_number)-1]['ip']['access-group'][direction]={'acl':{'acl-name':req_to_change['name'], direction:[None]}}
+            body=json.dumps(interface_config)
+            response_aclapply=putSomethingConfig(conn_strings, "/interface", body)
+        else:
+            response_aclapply=interface_config_res
 
     functions=[parallel_applyacl, parallel_editaclentry]
     threads=[]
@@ -523,42 +537,61 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
 
     for thread in threads:
         thread.join()
+    if response_acledit==204 and response_aclapply==204:
+        return {"code":status.HTTP_204_NO_CONTENT}
+    else:
+        try:
+            response_body_acledit=json.loads(response_acledit.text)
+        except:
+            response_body_acledit={}
 
-    return response
+        try:
+            response_body_aclapply=json.loads(response_aclapply.text)
+        except:
+            response_body_aclapply={}
+        return {"code": status.HTTP_404_NOT_FOUND, "body": {"acledit":response_body_acledit, "aclapply":response_body_aclapply}}
 
 
 def delAcl(conn_strings: dict, req_to_del:dict)->list:
     # delete acl entry
-    response={}
     response_acldelete=delSomethingConfig(conn_strings, "/ip/access-list/standard=%s"%(req_to_del["name"]))
-    try:
-        response["acl_delete"]={'code': response_acldelete.status_code, 'body': json.loads(response_acldelete.text)}
-    except Exception:
-        response["acl_delete"]={'code': response_acldelete.status_code, 'body': {}}
 
     # delete applied acl entry
-    interface_config=json.loads(getSomethingConfig(conn_strings, "/interface").text)
-    for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
-        for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
-            try:
-                if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_del['name']:
-                    del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['out']['acl']
-            except:
-                pass
+    interface_config_res=getSomethingConfig(conn_strings, "/interface")
+    if interface_config_res.status_code==204:
+        interface_config=json.loads(interface_config_res.text)
+        for config_interface_type in interface_config["Cisco-IOS-XE-native:interface"]:
+            for idx, config_interface_setting in enumerate(interface_config["Cisco-IOS-XE-native:interface"][config_interface_type]):
+                try:
+                    if config_interface_setting['ip']['access-group']['out']['acl']['acl-name']==req_to_del['name']:
+                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['out']['acl']
+                except:
+                    pass
 
-            try:
-                if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_del['name']:
-                    del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
-            except:
-                pass
-    body=json.dumps(interface_config)
-    response_aclapply_delete=putSomethingConfig(conn_strings, "/interface", body)
-    try:
-        response["acl_apply_delete"]={'code': response_aclapply_delete.status_code, 'body': json.loads(response_aclapply_delete.text)}
-    except Exception:
-        response["acl_apply_delete"]={'code': response_aclapply_delete.status_code, 'body': {}}
+                try:
+                    if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_del['name']:
+                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
+                except:
+                    pass
+        body=json.dumps(interface_config)
+        response_aclapply_delete=putSomethingConfig(conn_strings, "/interface", body)
+    else:
+        response_aclapply_delete=response_acldelete
 
-    return response
+    if response_acldelete.status_code==204 and response_aclapply_delete.status_code==204:
+        return {"code":status.HTTP_204_NO_CONTENT}
+    else:
+        try:
+            response_body_acldelete=json.loads(response_acldelete.text)
+        except Exception:
+            response_body_acldelete={}
+
+        try:
+            response_body_aclapply_delete=json.loads(response_aclapply_delete.text)
+        except Exception:
+            response_body_aclapply_delete={}
+
+        return {"code": status.HTTP_404_NOT_FOUND, "body":{"acldelete": response_body_acldelete, "aclapply delete": response_body_aclapply_delete}}
     
     
 def check_device_detector_config(conn_strings:dict, req_to_check:dict)->dict:
@@ -682,17 +715,18 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
 
 
     # Sync apply flow to interface
-    def apply_flow():
+    def parallel_apply_flow():
         global response_interface_flow_config
         ## Delete all flow in all interface
         interfaces_current=getSomethingConfig(conn_strings, "/interface")
-        interfaces_current_data=json.loads(interfaces_current.text)['Cisco-IOS-XE-native:interface']
-        for interface_types in interfaces_current_data:
-            for interface in interfaces_current_data[interface_types]:
-                try:
-                    delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_type, interface["name"]))
-                except:
-                    pass
+        if interfaces_current.status_code==200:
+            interfaces_current_data=json.loads(interfaces_current.text)['Cisco-IOS-XE-native:interface']
+            for interface_types in interfaces_current_data:
+                for interface in interfaces_current_data[interface_types]:
+                    response_interface_flow_config=delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_type, interface["name"]))
+        else:
+            response_interface_flow_config=interfaces_current
+
 
         ## Add flow to correct interface
         interface_type=""
@@ -705,7 +739,7 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
         body=json.dumps({ "Cisco-IOS-XE-flow:flow": { "monitor": [ { "name": "RETIA_MONITOR", "output": [None] } ] } })
         response_interface_flow_config=putSomethingConfig(conn_strings, "/interface/%s=%s/ip/flow"%(interface_type, interface_number), body)
 
-    functions=[parallel_flow, apply_flow]
+    functions=[parallel_flow, parallel_apply_flow]
     threads=[]
     for function in functions:
         run_thread=Thread(target=function)
@@ -714,7 +748,6 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
 
     for thread in threads:
         thread.join()
-
 
     if response_flow_config.status_code==204 and response_interface_flow_config.status_code==204:
         return {"code":status.HTTP_204_NO_CONTENT}
@@ -729,27 +762,36 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
         except:
             response_body_interface_flow_config={}
 
-        return {"code":status.http_502_BAD_GATEWAY, "body":{"flow_config":response_body_flow_config, "flow_interface_config": response_body_interface_flow_config}}
+        return {"code":status.HTTP_404_NOT_FOUND, "body":{"flow_config":response_body_flow_config, "flow_interface_config": response_body_interface_flow_config}}
 
 def del_device_detector_config(conn_strings:dict)->dict:
     # Delete all flow in all interface
     interfaces_current=getSomethingConfig(conn_strings, "/interface")
-    interfaces_current_data=json.loads(interfaces_current.text)['Cisco-IOS-XE-native:interface']
-    for interface_types in interfaces_current_data:
-        for interface in interfaces_current_data[interface_types]:
-            try:
-                delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_types, interface["name"]))
-            except:
-                pass
+    if interfaces_current.status_code==200:
+        interfaces_current_data=json.loads(interfaces_current.text)['Cisco-IOS-XE-native:interface']
+        for interface_types in interfaces_current_data:
+            for interface in interfaces_current_data[interface_types]:
+                interface_flow_del_response=delSomethingConfig(conn_strings=conn_strings, path="/interface/%s=%s/ip/flow"%(interface_types, interface["name"]))
+    else:
+        interface_flow_del_response=interfaces_current
 
     # Delete flow
     flow_del_response=delSomethingConfig(conn_strings=conn_strings, path="/flow")
     
-    try:
-        response_body=json.loads(flow_del_response.text)
-    except:
-        response_body={}
-    return {"code": flow_del_response.status_code, "body": response_body}
+    if interface_flow_del_response.status_code==204 and flow_del_response.status_code==204:
+        return {"code":status.HTTP_204_NO_CONTENT}
+    else:
+        try:
+            response_body_interface_flow_del=json.loads(interface_flow_del_response.text)
+        except:
+            response_body_interface_flow_del={}
+
+        try:
+            response_body_flow_del=json.loads(flow_del_response.text)
+        except:
+            response_body_flow_del={}
+
+        return {"code":status.HTTP_404_NOT_FOUND, "body":{"flow_config":response_body_interface_flow_del, "flow_interface_config": response_body_flow_del}}
 
 
 # Monitoring node operation

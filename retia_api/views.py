@@ -341,29 +341,21 @@ def acl_detail(request, hostname, name):
     elif request.method=="PUT":
         result=setAclDetail(conn_strings=conn_strings, req_to_change=request.data)
 
-        if result['acl_edit']["code"] == 200  or result['acl_edit']["code"]==204:
+        if result["code"] == 200  or result["code"]==204:
             activity_log("info", hostname, "ACL", "ACL %s config saved: %s"%(name, request.data['rules']))
         else:
-            activity_log("error", hostname, "ACL", "ACL %s config error: %s"%(name, result['acl_edit']['body']))
+            activity_log("error", hostname, "ACL", "ACL %s config error: %s"%(name, result['body']))
 
-        if result['acl_apply']["code"] == 200  or result['acl_apply']["code"]==204:
-            activity_log("info", hostname, "ACL", "ACL %s applied to interface successfully: %s"%(name, request.data['apply_to_interface']))
-        else:
-            activity_log("error", hostname, "ACL", "ACL %s applied to interface failed: %s"%(name, result['acl_apply']['body']))
         return Response(result)
+    
     elif request.method=="DELETE":
         result=delAcl(conn_strings=conn_strings, req_to_del={"name":name})
 
-        if result['acl_delete']["code"] == 200  or result['acl_delete']["code"]==204:
+        if result["code"] == 200  or result["code"]==204:
             activity_log("info", hostname, "ACL", "ACL %s deleted."%(name))
         else:
-            activity_log("error", hostname, "ACL", "ACL %s deletion error: %s."%(name, result['acl_delete']['body']))
+            activity_log("error", hostname, "ACL", "ACL %s deletion error: %s."%(name, result['body']))
 
-        if result['acl_apply_delete']["code"] == 200  or result['acl_apply_delete']["code"]==204:
-            activity_log("info", hostname, "ACL", "ACL %s unapplied on interface."%(name))
-        else:
-            activity_log("error", hostname, "ACL", "ACL %s unapplying error: %s."%(name, result['acl_apply_delete']['body']))
-           
         return Response(result)
 
 @api_view(['GET','POST'])
@@ -434,7 +426,7 @@ def detector_detail(request, device):
                     detector.delete()
                 else:
                     activity_log("error", 'retia-engine', "detector", "Detector %s edit error: %s."%(device, device_operation_result['body']))
-                    return Response(status=status.http_502_BAD_GATEWAY,data={"error":device_operation_result["body"]})
+                    return Response(data={"error":device_operation_result["body"]})
             serializer.save()
             activity_log("info", 'retia-engine', "detector", "Detector %s edited successfully."%(device))
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -450,7 +442,7 @@ def detector_detail(request, device):
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             activity_log("error", 'retia-engine', "detector", "Detector %s deletion error: %s."%(device, device_operation_result))
-            return Response(status=status.http_502_BAD_GATEWAY, data=device_operation_result)
+            return Response(data=device_operation_result)
 
 @api_view(['PUT'])
 def detector_sync(request, device):
@@ -472,10 +464,10 @@ def detector_sync(request, device):
     if request.method=='PUT':
         result=sync_device_detector_config(conn_strings=conn_strings, req_to_change={"device_interface_to_filebeat":detector.device_interface_to_filebeat, "device_interface_to_server": detector.device_interface_to_server, "filebeat_host": detector.filebeat_host, "filebeat_port":detector.filebeat_port})
 
-        if result["code"] == 200  or result["code"]==204:
+        if result["code"] == 200 or result["code"]==204:
             activity_log("info", 'retia-engine', "detector", "Detector netflow device %s synced."%(device))
         else:
-            activity_log("error", 'retia-engine', "detector", "Detector netflow device %s failed to sync."%(device, result['body']))
+            activity_log("error", 'retia-engine', "detector", "Detector netflow device %s failed to sync: %s"%(device, result['body']))
 
         return Response(result)
 
