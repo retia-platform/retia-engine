@@ -253,13 +253,13 @@ def getInterfaceDetail(conn_strings: dict, req_to_show: dict)->dict:
         err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
         response=err
 
-    # Tambah mac addr, int status (up/down)
-
     if len(response.text)>0:
         try:
-            response_body={}
             interface_data=json.loads(response.text)["ietf-interfaces:interface"]
-            response_body={"name":interface_data["name"], "type":interface_data["type"], "enabled": interface_data["enabled"], "ip":interface_data["ietf-ip:ipv4"]["address"][0]["ip"], "netmask":interface_data["ietf-ip:ipv4"]["address"][0]["netmask"]}
+            if "address" in interface_data["ietf-ip:ipv4"]:
+                response_body={"name":interface_data["name"], "type":interface_data["type"], "enabled": interface_data["enabled"], "ip":interface_data["ietf-ip:ipv4"]["address"][0]["ip"], "netmask":interface_data["ietf-ip:ipv4"]["address"][0]["netmask"]}
+            else:
+                response_body={"name":interface_data["name"], "type":interface_data["type"], "enabled": interface_data["enabled"], "ip":None, "netmask":None}
         except:
             response_body=json.loads(response.text)
     else:
