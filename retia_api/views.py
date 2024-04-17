@@ -85,6 +85,7 @@ def device_detail(request, hostname):
 
         serializer=DeviceSerializer(instance=device)
         data=dict(serializer.data)
+        del data["secret"]
         def parallel_version():
             data["sotfware_version"]=getVersion(conn_strings=conn_strings)["body"]
         def parallel_loginbanner():
