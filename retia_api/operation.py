@@ -536,7 +536,6 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
 
     for thread in threads:
         thread.join()
-    print(response_acledit.status_code)
     if response_acledit.status_code==204 and response_aclapply.status_code==204:
         return {"code":status.HTTP_204_NO_CONTENT, "body": {}}
     elif response_acledit.status_code==404 or response_aclapply.status_code==404:
@@ -816,7 +815,7 @@ def getSysUpTime(mgmt_ipaddr: str):
     try:
         response_body=json.loads(requests.get(url="http://localhost:9090/api/v1/query?query=sysUpTime{instance='%s'}/100"%(mgmt_ipaddr)).text)['data']['result'][0]['value'][1]
     except: 
-        response_body={"0"}
+        response_body="0"
     return response_body
 
 def getDeviceUpStatus(mgmt_ipaddr: str):

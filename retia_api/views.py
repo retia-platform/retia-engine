@@ -94,9 +94,11 @@ def device_detail(request, hostname):
         def parallel_sysuptime():
             data['sys_uptime']=getSysUpTime(device.mgmt_ipaddr)
         def parallel_devicestatus():
-            device_statuses=['up','down']
-            data['status']=device_statuses[int(getDeviceUpStatus(device.mgmt_ipaddr))-1]
-        
+            device_statuses=['down', 'up', 'unknown']
+            try:
+                data['status']=device_statuses[int(getDeviceUpStatus(device.mgmt_ipaddr))]
+            except:
+                data['status']=device_statuses[2]
         functions=[parallel_version, parallel_loginbanner, parallel_motdbanner, parallel_sysuptime, parallel_devicestatus]
         threads=[]
         for function in functions:
