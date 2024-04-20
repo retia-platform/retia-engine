@@ -1,3 +1,6 @@
+<a href="https://github.com/retia-platform/retia-engine-experiment/actions/workflows/build.yml">
+  <img src="https://github.com/retia-platform/retia-engine-experiment/actions/workflows/build.yml/badge.svg" alt="Build" target="_blank" rel="noopener noreferrer">
+</a>
 <a href="https://github.com/retia-platform/retia-engine-experiment/actions/workflows/github-code-scanning/codeql">
   <img src="https://github.com/retia-platform/retia-engine-experiment/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL Analysis" target="_blank" rel="noopener noreferrer">
 </a>
