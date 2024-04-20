@@ -8,13 +8,13 @@
   <img src="https://img.shields.io/github/license/retia-platform/retia-engine-experiment" alt="License" target="_blank" rel="noopener noreferrer">
 </a>
 
-## 🚀 retia engine
+## 🫙 retia engine
 
 The core engine for Retia Platform.
 
 > Written in [Python](https://www.python.org) using [Django](https://www.djangoproject.com) and [Poetry](https://python-poetry.org). Powered by [Prometheus](https://prometheus.io).
 
-### quickstart
+### 🚀 quickstart
 
 This project uses [Poetry](https://python-poetry.org) for dependency management. To get started, install Poetry and run the following commands:
 
