@@ -8,49 +8,73 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='ActivityLog',
+            name="ActivityLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('time', models.DateTimeField(null=True)),
-                ('severity', models.CharField(blank=True, max_length=10)),
-                ('instance', models.CharField(blank=True, max_length=63)),
-                ('category', models.CharField(blank=True, max_length=10)),
-                ('messages', models.CharField(blank=True, max_length=255)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("time", models.DateTimeField(null=True)),
+                ("severity", models.CharField(blank=True, max_length=10)),
+                ("instance", models.CharField(blank=True, max_length=63)),
+                ("category", models.CharField(blank=True, max_length=10)),
+                ("messages", models.CharField(blank=True, max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='Device',
+            name="Device",
             fields=[
-                ('hostname', models.CharField(max_length=63, primary_key=True, serialize=False)),
-                ('brand', models.CharField(max_length=32, null=True)),
-                ('device_type', models.CharField(max_length=10, null=True)),
-                ('mgmt_ipaddr', models.GenericIPAddressField()),
-                ('port', models.IntegerField(default=443)),
-                ('username', models.CharField(default=None, max_length=16)),
-                ('secret', models.CharField(default=None, max_length=64)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('modified_at', models.DateTimeField(auto_now=True)),
+                (
+                    "hostname",
+                    models.CharField(max_length=63, primary_key=True, serialize=False),
+                ),
+                ("brand", models.CharField(max_length=32, null=True)),
+                ("device_type", models.CharField(max_length=10, null=True)),
+                ("mgmt_ipaddr", models.GenericIPAddressField()),
+                ("port", models.IntegerField(default=443)),
+                ("username", models.CharField(default=None, max_length=16)),
+                ("secret", models.CharField(default=None, max_length=64)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("modified_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Detector',
+            name="Detector",
             fields=[
-                ('device', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='retia_api.device')),
-                ('device_interface_to_filebeat', models.CharField(default=None, max_length=200)),
-                ('device_interface_to_server', models.CharField(default=None, max_length=200)),
-                ('window_size', models.IntegerField(default=1)),
-                ('sampling_interval', models.IntegerField(default=20)),
-                ('elastic_host', models.CharField(default='127.0.0.1', max_length=200)),
-                ('elastic_index', models.CharField(max_length=255)),
-                ('filebeat_host', models.GenericIPAddressField()),
-                ('filebeat_port', models.IntegerField(default=50255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('modified_at', models.DateTimeField(auto_now=True)),
+                (
+                    "device",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="retia_api.device",
+                    ),
+                ),
+                (
+                    "device_interface_to_filebeat",
+                    models.CharField(default=None, max_length=200),
+                ),
+                (
+                    "device_interface_to_server",
+                    models.CharField(default=None, max_length=200),
+                ),
+                ("window_size", models.IntegerField(default=1)),
+                ("sampling_interval", models.IntegerField(default=20)),
+                ("elastic_host", models.CharField(default="127.0.0.1", max_length=200)),
+                ("elastic_index", models.CharField(max_length=255)),
+                ("filebeat_host", models.GenericIPAddressField()),
+                ("filebeat_port", models.IntegerField(default=50255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("modified_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]

@@ -4,12 +4,15 @@ from elasticsearch import Elasticsearch
 from datetime import datetime
 from icecream import ic
 
-def get_netflow_resampled(start_time: str, end_time: int, elastic_host: str, elastic_index: str) -> list:
+
+def get_netflow_resampled(
+    start_time: str, end_time: int, elastic_host: str, elastic_index: str
+) -> list:
     while True:
         response = Elasticsearch(
-            hosts=["https://"+elastic_host+":9200"],
+            hosts=["https://" + elastic_host + ":9200"],
             ca_certs="/etc/elasticsearch/certs/http_ca.crt",
-            basic_auth=("elastic","f*xBBTke-ytKJkVoZ0+M")
+            basic_auth=("elastic", "f*xBBTke-ytKJkVoZ0+M"),
         ).search(
             index=elastic_index,
             body={
@@ -18,7 +21,7 @@ def get_netflow_resampled(start_time: str, end_time: int, elastic_host: str, ela
                     "range": {
                         "@timestamp": {
                             "gte": "now-{}s".format(end_time),
-                            "lte": start_time
+                            "lte": start_time,
                         }
                     }
                 },
@@ -26,18 +29,12 @@ def get_netflow_resampled(start_time: str, end_time: int, elastic_host: str, ela
                     "all_attributes": {
                         "date_histogram": {
                             "field": "@timestamp",
-                            "fixed_interval": "{}s".format(end_time)
+                            "fixed_interval": "{}s".format(end_time),
                         },
                         "aggs": {
-                            "packets": {
-                                "sum": {
-                                    "field": "netflow.packet_delta_count"
-                                }
-                            },
+                            "packets": {"sum": {"field": "netflow.packet_delta_count"}},
                             "USIP": {
-                                "cardinality": {
-                                    "field": "netflow.source_ipv4_address"
-                                }
+                                "cardinality": {"field": "netflow.source_ipv4_address"}
                             },
                             "UDIP": {
                                 "cardinality": {
@@ -45,14 +42,12 @@ def get_netflow_resampled(start_time: str, end_time: int, elastic_host: str, ela
                                 }
                             },
                             "UPR": {
-                                "cardinality": {
-                                    "field": "netflow.protocol_identifier"
-                                }
-                            }
-                        }
+                                "cardinality": {"field": "netflow.protocol_identifier"}
+                            },
+                        },
                     }
-                }
-            }
+                },
+            },
         )
         if len(response["aggregations"]["all_attributes"]["buckets"]) > 0:
             return response["aggregations"]["all_attributes"]["buckets"]
@@ -60,29 +55,38 @@ def get_netflow_resampled(start_time: str, end_time: int, elastic_host: str, ela
             continue
 
 
-def get_netflow_data_at_nearest_time(time: int, elastic_host: str, elastic_index: str, is_after=True) -> dict:
+def get_netflow_data_at_nearest_time(
+    time: int, elastic_host: str, elastic_index: str, is_after=True
+) -> dict:
     response = Elasticsearch(
-        hosts=["https://"+elastic_host+":9200"],
+        hosts=["https://" + elastic_host + ":9200"],
         ca_certs="/etc/elasticsearch/certs/http_ca.crt",
-        basic_auth=("elastic","f*xBBTke-ytKJkVoZ0+M")
+        basic_auth=("elastic", "f*xBBTke-ytKJkVoZ0+M"),
     ).search(
         index=elastic_index,
         body={
             "size": 1,
             "query": {
                 "match": {
-                    "@timestamp": datetime.utcfromtimestamp(time).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+                    "@timestamp": datetime.utcfromtimestamp(time).strftime(
+                        "%Y-%m-%dT%H:%M:%S.000Z"
+                    )
                 }
             },
             "_source": [
                 "netflow.source_ipv4_address",
                 "netflow.destination_ipv4_address",
                 "netflow.destination_transport_port",
-                "netflow.protocol_identifier"
-            ]
-        }
+                "netflow.protocol_identifier",
+            ],
+        },
     )
-    if response['hits']['total']['value'] > 0 and 'netflow' in response['hits']['hits'][0]['_source']:
-        return response['hits']['hits'][0]['_source']['netflow']
+    if (
+        response["hits"]["total"]["value"] > 0
+        and "netflow" in response["hits"]["hits"][0]["_source"]
+    ):
+        return response["hits"]["hits"][0]["_source"]["netflow"]
     else:
-        return get_netflow_data_at_nearest_time(time + 1 if is_after is True else time - 1, elastic_host, elastic_index)
+        return get_netflow_data_at_nearest_time(
+            time + 1 if is_after is True else time - 1, elastic_host, elastic_index
+        )

@@ -1,10 +1,13 @@
 from retia_api.operation import *
 
-global_ipaddr="172.16.0.1"
-global_port="443"
-global_auth=("retia", "retia00!")
-global_header={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}
-conn_strings={"ipaddr": global_ipaddr, "port": global_port, "credential": global_auth}
+global_ipaddr = "172.16.0.1"
+global_port = "443"
+global_auth = ("retia", "retia00!")
+global_header = {
+    "Content-Type": "application/yang-data+json",
+    "Accept": "application/yang-data+json",
+}
+conn_strings = {"ipaddr": global_ipaddr, "port": global_port, "credential": global_auth}
 
 # print(getInterfaceList({"ipaddr": global_ipaddr, "port": global_port, "credential": global_auth}))
 # print(getInterfaceDetail({"ipaddr": global_ipaddr, "port": global_port, "credential": global_auth},req_to_show={"name":"GigabitEthernet1"}))
