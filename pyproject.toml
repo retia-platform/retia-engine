@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "retia-engine"
 version = "0.1"
-description = "🚀 The core engine for Retia Platform"
+description = "🫙 The core engine for Retia Platform"
 authors = ["Ezra Lazuardy <ezralazuardy@icloud.com>"]
 license = "MIT"
 readme = "README.md"
