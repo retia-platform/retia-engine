@@ -9,4 +9,4 @@
 
 The core engine for Retia Platform.
 
-> Written in [Python](https://www.python.org) using [Django](https://www.djangoproject.com). Powered by [Prometheus](https://prometheus.io).
+> Written in [Python](https://www.python.org) using [Django](https://www.djangoproject.com) and [Poetry](https://python-poetry.org). Powered by [Prometheus](https://prometheus.io).
