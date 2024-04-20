@@ -1,11 +1,8 @@
 import numpy as np
 import pandas as pd
-# from django.utils.datetime_safe import datetime
 from datetime import datetime
 from retia_api.operation import getAclList, getAclDetail, createAcl, setAclDetail, delAcl
-
 from retia_api.elasticclient import get_netflow_data_at_nearest_time
-# from models import Log, Detector
 from retia_api.models import Detector
 from retia_api.utils import getprotobynumber
 from timeit import default_timer as timer
@@ -21,6 +18,7 @@ def core(data_to_be_used: list, detector_instance: Detector):
     A2_all = []
     A3_all = []
     A4_all = []
+
     for bucket in data_to_be_used:
         A1_all.append([
             bucket['key'],
@@ -143,7 +141,7 @@ def handle_result(j, N, data, detector_instance: Detector):
             ddos_mitigation_acl=ddos_mitigation_acl_res['body']
 
             # get latest sequnce number to use
-            
+
             if ddos_mitigation_acl_res['code']==200 or not 'error' in ddos_mitigation_acl:
                 if ddos_mitigation_acl_res['code']==404:
                     createAcl(conn_strings=conn_strings, req_to_create={'name':acl_name})
@@ -173,4 +171,3 @@ def handle_result(j, N, data, detector_instance: Detector):
             detection_result="Target: %s, message:NEGATIVE %s"%(detector_instance.device.mgmt_ipaddr, report)
             print(detection_result)
             activity_log("info", detector_instance.device.hostname, "detector", detection_result)
-

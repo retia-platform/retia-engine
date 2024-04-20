@@ -5,11 +5,7 @@ global_ipaddr="172.16.0.1"
 global_port="443"
 global_auth=("retia", "retia00!")
 global_header={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}
-
 conn_strings={"ipaddr": global_ipaddr, "port": global_port, "credential": global_auth}
-
-
-
 
 # print(getInterfaceList({"ipaddr": global_ipaddr, "port": global_port, "credential": global_auth}))
 # print(getInterfaceDetail({"ipaddr": global_ipaddr, "port": global_port, "credential": global_auth},req_to_show={"name":"GigabitEthernet1"}))
@@ -30,7 +26,6 @@ conn_strings={"ipaddr": global_ipaddr, "port": global_port, "credential": global
 # print(json.loads(getSomething(conn_strings, "/interface/GigabitEthernet=5/ip/flow/monitor").text))
 # print(add_netflow_config(conn_strings=conn_strings, req_to_create={}))
 # print(json.loads(getSomething(conn_strings=conn_strings, path="/flow/exporter=RETIA_EXPORTER").text))
-
 
 # print(check_device_detector_config(conn_strings=conn_strings, req_to_check={"device_interface_to_filebeat":"GigabitEthernet4", "filebeat_host": "172.16.0.2", "filebeat_port": 50255}))
 # print(del_device_detector_config(conn_strings, {"device_interface_to_server":"GigabitEthernet5"}))
