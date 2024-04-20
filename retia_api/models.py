@@ -26,7 +26,7 @@ class Detector(models.Model):
     filebeat_port = models.IntegerField(default=50255)
     created_at=models.DateTimeField(auto_now_add=True)
     modified_at=models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return self.device.hostname
 
@@ -36,7 +36,6 @@ class ActivityLog(models.Model):
     instance = models.CharField(max_length=63, blank=True)
     category = models.CharField(max_length=10, blank=True)
     messages = models.CharField(max_length=255, blank=True)
-
 
     def __str__(self):
         return "%s | %s | %s | %s | %s"%(self.time, self.severity, self.instance, self.category, self.messages)

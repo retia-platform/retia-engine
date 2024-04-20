@@ -1,5 +1,4 @@
 from retia_api.operation import *
-from retia_api.views import detector_start
 
 global_ipaddr="172.16.0.1"
 global_port="443"
@@ -29,5 +28,3 @@ conn_strings={"ipaddr": global_ipaddr, "port": global_port, "credential": global
 
 # print(check_device_detector_config(conn_strings=conn_strings, req_to_check={"device_interface_to_filebeat":"GigabitEthernet4", "filebeat_host": "172.16.0.2", "filebeat_port": 50255}))
 # print(del_device_detector_config(conn_strings, {"device_interface_to_server":"GigabitEthernet5"}))
-
-getMonitorDetail()

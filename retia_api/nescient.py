@@ -8,8 +8,6 @@ from retia_api.utils import getprotobynumber
 from timeit import default_timer as timer
 from retia_api.logging import activity_log
 
-
-
 def core(data_to_be_used: list, detector_instance: Detector):
     sampling_interval = detector_instance.sampling_interval
     window_size = detector_instance.window_size
@@ -30,13 +28,11 @@ def core(data_to_be_used: list, detector_instance: Detector):
         ])
         A3_all.append([
             bucket['key'],
-            0 if bucket['USIP']['value'] == 0 or bucket['UDIP']['value'] == 0 else bucket['USIP']['value'] /
-                                                                                   bucket['UDIP']['value']
+            0 if bucket['USIP']['value'] == 0 or bucket['UDIP']['value'] == 0 else bucket['USIP']['value'] / bucket['UDIP']['value']
         ])
         A4_all.append([
             bucket['key'],
-            0 if bucket['USIP']['value'] == 0 or bucket['UPR']['value'] == 0 else bucket['USIP']['value'] /
-                                                                                  bucket['UPR']['value']
+            0 if bucket['USIP']['value'] == 0 or bucket['UPR']['value'] == 0 else bucket['USIP']['value'] / bucket['UPR']['value']
         ])
 
     A_all = (
@@ -55,9 +51,9 @@ def core(data_to_be_used: list, detector_instance: Detector):
     for A in A_all:
         # Init values
         K = window_size
+        T = sampling_interval
         beta = 1.5
         j = 0
-        T = sampling_interval
         current_threshold_array = list()
         current_N_array = list()
         current_beta_array = list()
@@ -120,7 +116,10 @@ def handle_result(j, N, data, detector_instance: Detector):
         timestamp = int(str(data[idx]['key'])[:-3])
         if N[0][idx][1] is True and N[1][idx][1] is True and N[2][idx][1] is True and N[3][idx][1] is True:
             positive_traffic = get_netflow_data_at_nearest_time(
-                timestamp, detector_instance.elastic_host, detector_instance.elastic_index)
+                timestamp,
+                detector_instance.elastic_host,
+                detector_instance.elastic_index,
+            )
 
             report = "src: {}, dest: {}, dest_port: {}, L4_proto: {}".format(
                 positive_traffic['source_ipv4_address'],
@@ -141,7 +140,6 @@ def handle_result(j, N, data, detector_instance: Detector):
             ddos_mitigation_acl=ddos_mitigation_acl_res['body']
 
             # get latest sequnce number to use
-
             if ddos_mitigation_acl_res['code']==200 or not 'error' in ddos_mitigation_acl:
                 if ddos_mitigation_acl_res['code']==404:
                     createAcl(conn_strings=conn_strings, req_to_create={'name':acl_name})
@@ -157,10 +155,12 @@ def handle_result(j, N, data, detector_instance: Detector):
                 ddos_mitigation_acl['rules'].append({"sequence": next_sequence_numbers,"action": "deny","prefix": negative_traffic['source_ipv4_address'], "wildcard":None})
                 setAclDetail(conn_strings=conn_strings, req_to_change=ddos_mitigation_acl)
 
-
         else:
             negative_traffic = get_netflow_data_at_nearest_time(
-                timestamp, detector_instance.elastic_host, detector_instance.elastic_index)
+                timestamp,
+                detector_instance.elastic_host,
+                detector_instance.elastic_index,
+            )
 
             report = "src: {}, dest: {}, dest_port: {}, L4_proto: {}".format(
                 negative_traffic['source_ipv4_address'],

@@ -15,7 +15,6 @@ import netifaces as ni
 from retia_api.scheduler import scheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-
 @api_view(['GET','POST'])
 def devices(request):
     if request.method=='GET':
@@ -53,7 +52,7 @@ def devices(request):
             # Add SNMP-server config to device
             if not conn.status_code == 200:
                 activity_log("error", request.data["hostname"], "device", "Device added but detected offline: %s"%(conn.text))
-                return Response(status=conn.status_code, data={"info":"device added but detected offline"})            
+                return Response(status=conn.status_code, data={"info":"device added but detected offline"})
             else:
                 reta_engine_ipaddr=ni.ifaddresses('enp0s3')[ni.AF_INET][0]['addr']
                 body=json.dumps({"Cisco-IOS-XE-native:snmp-server": {"Cisco-IOS-XE-snmp:community": [{"name": "public","RO": [None]}],"Cisco-IOS-XE-snmp:host": [{"ip-address": reta_engine_ipaddr,"community-or-user": "public","version": "2c"}]}})
@@ -64,7 +63,6 @@ def devices(request):
             activity_log("error", request.data["hostname"], "device", "Device %s creation error: %s."%(request.data['hostname'], serializer.errors))
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": serializer.errors})
 
-        
 @api_view(['GET','PUT','DELETE'])
 def device_detail(request, hostname):
     # Check whether device exist in database
@@ -111,7 +109,7 @@ def device_detail(request, hostname):
             thread.join()
 
         return Response(data)
-    
+
     elif request.method=='PUT':
         serializer=DeviceSerializer(instance=device, data=request.data)
         if serializer.is_valid():
@@ -164,7 +162,7 @@ def device_detail(request, hostname):
         else:
             activity_log("error", hostname, "device", "Device %s edit error: %s"%(hostname, serializer.errors))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
     elif request.method=='DELETE':
         # Delete ip addr from prometheus config and reload it
         with open('./prometheus/prometheus.yml') as f:
@@ -181,20 +179,20 @@ def device_detail(request, hostname):
         activity_log("info", hostname, "device", "Device %s deleted succesfully"%(hostname))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(['GET'])  
+@api_view(['GET'])
 def interfaces(request, hostname):
     # Check whether device exist in database
     try:
         device=Device.objects.get(pk=hostname)
     except Device.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
     # Connection string to device
     conn_strings={"ipaddr":device.mgmt_ipaddr, "port":device.port, 'credential':(device.username, device.secret)}
 
     if request.method=='GET':
         return Response(getInterfaceList(conn_strings=conn_strings))
-    
+
 @api_view(['GET', 'PUT'])
 def interface_detail(request, hostname, name):
     # Check whether device exist in database
@@ -202,10 +200,10 @@ def interface_detail(request, hostname, name):
         device=Device.objects.get(pk=hostname)
     except Device.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
     # Connection string to device
     conn_strings={"ipaddr":device.mgmt_ipaddr, "port":device.port, 'credential':(device.username, device.secret)}
-    
+
     # Handle request methods
     if request.method=='GET':
         result=getInterfaceDetail(conn_strings=conn_strings, req_to_show={"name":name})
@@ -225,7 +223,6 @@ def interface_detail(request, hostname, name):
             activity_log("error", hostname, "interface", "Interface %s config error: %s"%(name, result['body']))
 
         return Response(result)
-        
 
 @api_view(['GET','PUT'])
 def static_route(request, hostname):
@@ -250,7 +247,6 @@ def static_route(request, hostname):
 
         return Response(result)
 
-    
 @api_view(['GET','POST'])
 def ospf_processes(request, hostname):
     # Check whether device exist in database
@@ -304,7 +300,7 @@ def ospf_process_detail(request, hostname, id):
             activity_log("error", hostname, "OSPF", "OSPF process %s deletion error: %s."%(id, result['body']))
 
         return Response(result)
-    
+
 @api_view(['GET','POST'])
 def acls(request, hostname):
     # Check whether device exist in database
@@ -350,7 +346,7 @@ def acl_detail(request, hostname, name):
             activity_log("error", hostname, "ACL", "ACL %s config error: %s"%(name, result['body']))
 
         return Response(result)
-    
+
     elif request.method=="DELETE":
         result=delAcl(conn_strings=conn_strings, req_to_del={"name":name})
 
@@ -422,7 +418,7 @@ def detector_detail(request, device):
         detector_data={"sync":device_sync_status, "data":data}
 
         return Response(detector_data)
-    
+
     elif request.method=='PUT':
         serializer=DetectorSerializer(instance=detector, data=request.data)
         if serializer.is_valid():
@@ -439,7 +435,7 @@ def detector_detail(request, device):
         else:
             activity_log("error", 'retia-engine', "detector", "Detector %s edit error: %s."%(device, serializer.errors))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
     elif request.method=='DELETE':
         device_operation_result=del_device_detector_config(conn_strings=conn_strings)
         if device_operation_result["code"]==204:
@@ -466,7 +462,7 @@ def detector_sync(request, device):
         device=Device.objects.get(pk=device)
     except Device.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
     # Connection string to device
     conn_strings={"ipaddr":device.mgmt_ipaddr, "port":device.port, 'credential':(device.username, device.secret)}
 
@@ -481,7 +477,7 @@ def detector_sync(request, device):
         return Response(result)
 
 @api_view(['PUT'])
-def detector_run(request, device):    
+def detector_run(request, device):
     def detector_job(detector_instance):
         print("\n\n\n\n\n----------------------------------------------------------------------------------")
         core(get_netflow_resampled("now", detector_instance.sampling_interval, detector_instance.elastic_host, detector_instance.elastic_index), detector_instance)
@@ -497,13 +493,13 @@ def detector_run(request, device):
             body=request.data
             if body['status']=='up':
                 scheduler.add_job(func=detector_job, args=[detector], trigger=IntervalTrigger(seconds=detector.sampling_interval), id=str(detector.device), max_instances=1, replace_existing=True)
-                activity_log("info","retia-engine", "detector", "Detector device %s set to running."%(str(detector.device)))   
+                activity_log("info","retia-engine", "detector", "Detector device %s set to running."%(str(detector.device)))
                 return Response(status=status.HTTP_204_NO_CONTENT)
-                
+
             elif body['status']=='down':
                 scheduler.remove_job(str(detector.device))
-                activity_log("info","retia-engine", "detector", "Detector device %s is stopped."%(str(detector.device)))                
-                return Response(status=status.HTTP_204_NO_CONTENT)          
+                activity_log("info","retia-engine", "detector", "Detector device %s is stopped."%(str(detector.device)))
+                return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             # fix error message format
             err_=str(e)
@@ -529,7 +525,7 @@ def interface_in_throughput(request, hostname, name):
         device=Device.objects.get(pk=hostname)
     except Device.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
     if request.method=='GET':
         start_time=request.query_params['start_time']
         end_time=request.query_params['end_time']
@@ -542,7 +538,7 @@ def interface_out_throughput(request, hostname, name):
         device=Device.objects.get(pk=hostname)
     except Device.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
     if request.method=='GET':
         start_time=request.query_params['start_time']
         end_time=request.query_params['end_time']
@@ -564,5 +560,5 @@ def log_activity(request):
             logtime_utc=datetime.fromisoformat(log_item['time'])
             logtime_local=logtime_utc.astimezone(tz=tzlocal.get_localzone())
             response_body[idx]['time']=logtime_local
-    
+
         return Response(response_body)

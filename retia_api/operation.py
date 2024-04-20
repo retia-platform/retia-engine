@@ -1,4 +1,4 @@
-import json, requests
+import json, requests, urllib3
 from rest_framework import status
 from retia_api.models import *
 from datetime import datetime
@@ -7,9 +7,7 @@ import tzlocal
 from threading import Thread
 
 # Disable Sertificate Insecure Request Warning
-requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
-
-
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Device configration operation
 def check_device_connection(conn_strings: dict)->dict:
@@ -17,7 +15,7 @@ def check_device_connection(conn_strings: dict)->dict:
         def __init__(self, err_code, err_text):
             self.status_code=err_code
             self.text=err_text
-    
+
     target_url="https://%s:%s/restconf"%(conn_strings["ipaddr"], conn_strings["port"])
     try:
         response=requests.get(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, timeout=5)
@@ -25,7 +23,7 @@ def check_device_connection(conn_strings: dict)->dict:
     except requests.exceptions.ConnectionError:
         err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
         return err
-    
+
 
 def getSomethingConfig(conn_strings: dict, path: str):
     class response_custom:
@@ -83,20 +81,20 @@ def postSomethingConfig(conn_strings: dict, path: str, body: str):
     except requests.exceptions.ConnectionError:
         err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
         return err
-    
+
 def delSomethingConfig(conn_strings: dict, path: str):
     class response_custom:
         def __init__(self, err_code, err_text):
             self.status_code=err_code
             self.text=err_text
-            
+
     try:
         target_url="https://%s:%s/restconf/data/Cisco-IOS-XE-native:native%s"%(conn_strings["ipaddr"], conn_strings["port"], path)
         return requests.delete(url=target_url, auth=conn_strings["credential"], headers={"Content-Type": "application/yang-data+json", "Accept": "application/yang-data+json"}, verify=False, timeout=5)
     except requests.exceptions.ConnectionError:
         err=response_custom(status.HTTP_404_NOT_FOUND, json.dumps({"error":"Device offline"}))
         return err
-    
+
 def getVersion(conn_strings: dict)->dict:
     response=getSomethingConfig(conn_strings, "/version")
     if len(response.text)>0:
@@ -111,7 +109,7 @@ def getVersion(conn_strings: dict)->dict:
 def getHostname(conn_strings: dict)->dict:
     response=getSomethingConfig(conn_strings, "/hostname")
     if len(response.text)>0:
-        try: 
+        try:
             response_body=json.loads(response.text)["Cisco-IOS-XE-native:hostname"]
         except:
             response_body=json.loads(response.text)
@@ -361,7 +359,7 @@ def getOspfProcessDetail(conn_strings: dict, req_to_show: dict)->dict:
                 response_body["redistribute"]=list(response_body["redistribute"].keys())
             else:
                 response_body["redistribute"]=[]
-            
+
             if "passive-interface" in response_body:
                 response_body["passive-interface"]=response_body["passive-interface"]["interface"]
             else:
@@ -374,7 +372,7 @@ def getOspfProcessDetail(conn_strings: dict, req_to_show: dict)->dict:
 
 def setOspfProcessDetail(conn_strings: dict, req_to_change: dict)->dict:
     body={"Cisco-IOS-XE-ospf:process-id":{"id":req_to_change["id"], "network":req_to_change["network"], "passive-interface": {"interface": req_to_change["passive-interface"]}}}
-    
+
     if req_to_change["default-information-originate"]==True:
         body["Cisco-IOS-XE-ospf:process-id"]["default-information"]={"originate":{}}
 
@@ -382,7 +380,7 @@ def setOspfProcessDetail(conn_strings: dict, req_to_change: dict)->dict:
         body["Cisco-IOS-XE-ospf:process-id"]["redistribute"]={}
         for r in req_to_change["redistribute"]:
             body["Cisco-IOS-XE-ospf:process-id"]["redistribute"][r]={}
-            
+
     body=json.dumps(body)
     response=putSomethingConfig(conn_strings, "/router/Cisco-IOS-XE-ospf:router-ospf/ospf/process-id=%s"%(req_to_change["id"]), body)
 
@@ -390,7 +388,7 @@ def setOspfProcessDetail(conn_strings: dict, req_to_change: dict)->dict:
         response_body=json.loads(response.text)
     except:
         response_body={}
-        
+
     body=json.dumps(body, indent=2)
 
     return {"code": response.status_code, "body": response_body}
@@ -497,7 +495,7 @@ def setAclDetail(conn_strings: dict, req_to_change: dict)->dict:
 
                     try:
                         if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_change['name']:
-                            del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
+                            del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']
                     except:
                         pass
 
@@ -571,7 +569,7 @@ def delAcl(conn_strings: dict, req_to_del:dict)->list:
 
                 try:
                     if config_interface_setting['ip']['access-group']['in']['acl']['acl-name']==req_to_del['name']:
-                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']                
+                        del interface_config["Cisco-IOS-XE-native:interface"][config_interface_type][idx]['ip']['access-group']['in']['acl']
                 except:
                     pass
         body=json.dumps(interface_config)
@@ -595,8 +593,8 @@ def delAcl(conn_strings: dict, req_to_del:dict)->list:
             response_body_aclapply_delete={}
 
         return {"code": status.HTTP_500_INTERNAL_SERVER_ERROR, "body":{"acldelete": response_body_acldelete, "aclapply delete": response_body_aclapply_delete}}
-    
-    
+
+
 def check_device_detector_config(conn_strings:dict, req_to_check:dict)->dict:
     # Check flow record, exporter, monitor configuration
     conn_check=check_device_connection(conn_strings=conn_strings)
@@ -637,7 +635,7 @@ def check_device_detector_config(conn_strings:dict, req_to_check:dict)->dict:
                 record_config_current_status="NEED TO SYNC"
         else:
             record_config_current_status=record_config_current.text
-        
+
         if exporter_config_current.status_code==200:
             interface_type=""
             interface_number=""
@@ -740,7 +738,7 @@ def sync_device_detector_config(conn_strings:dict, req_to_change:dict)->dict:
                 interface_number+=char
         body=json.dumps({ "Cisco-IOS-XE-flow:flow": { "monitor": [ { "name": "RETIA_MONITOR", "output": [None] } ] } })
         response_interface_flow_config=putSomethingConfig(conn_strings, "/interface/%s=%s/ip/flow"%(interface_type, interface_number), body)
-    
+
     functions=[parallel_flow, parallel_apply_flow]
     threads=[]
     for function in functions:
@@ -779,7 +777,7 @@ def del_device_detector_config(conn_strings:dict)->dict:
 
     # Delete flow
     flow_del_response=delSomethingConfig(conn_strings=conn_strings, path="/flow")
-    
+
     if interface_flow_del_response.status_code==204 and flow_del_response.status_code==204:
         return {"code":status.HTTP_204_NO_CONTENT}
     else:
@@ -814,7 +812,7 @@ def getAlertStatus():
 def getSysUpTime(mgmt_ipaddr: str):
     try:
         response_body=json.loads(requests.get(url="http://localhost:9090/api/v1/query?query=sysUpTime{instance='%s'}/100"%(mgmt_ipaddr)).text)['data']['result'][0]['value'][1]
-    except: 
+    except:
         response_body="0"
     return response_body
 
@@ -845,7 +843,7 @@ def getInterfaceInThroughput(mgmt_ipaddr: str, int_name: str, start_time, end_ti
     try:
         response_body_temp=json.loads(requests.get(url=target_url).text)['data']['result']
         if len(response_body_temp)>1:
-            zero_val=response_body_temp[0]['values']  
+            zero_val=response_body_temp[0]['values']
             metric_val=response_body_temp[1]['values']
             response_body_temp_appended=zero_val+metric_val
             response_body=sorted(response_body_temp_appended, key=lambda sublist: sublist[0])
@@ -868,7 +866,7 @@ def getInterfaceOutThroughput(mgmt_ipaddr: str, int_name: str, start_time, end_t
     try:
         response_body_temp=json.loads(requests.get(url=target_url).text)['data']['result']
         if len(response_body_temp)>1:
-            zero_val=response_body_temp[0]['values']  
+            zero_val=response_body_temp[0]['values']
             metric_val=response_body_temp[1]['values']
             response_body_temp_appended=zero_val+metric_val
             response_body=sorted(response_body_temp_appended, key=lambda sublist: sublist[0])
@@ -876,7 +874,7 @@ def getInterfaceOutThroughput(mgmt_ipaddr: str, int_name: str, start_time, end_t
             response_body=json.loads(requests.get(url=target_url).text)['data']['result'][0]['values']
     except:
         response_body={}
-    
+
     for idx, metric_item in enumerate(response_body):
         response_body[idx][0]=datetime.fromtimestamp(metric_item[0], tz=tzlocal.get_localzone()).isoformat(timespec="seconds")
     return response_body
