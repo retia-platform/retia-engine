@@ -12,23 +12,19 @@
 
 The core engine for Retia Platform.
 
-> Written in [Python](https://www.python.org) using [Django](https://www.djangoproject.com) and [Poetry](https://python-poetry.org). Powered by [Prometheus](https://prometheus.io).
+> Written in [Python](https://www.python.org) using [Django](https://www.djangoproject.com) and [pdm](https://pdm-project.org/en/stable). Powered by [Prometheus](https://prometheus.io).
 
 ### 🚀 quickstart
 
-This project uses [Poetry](https://python-poetry.org) for dependency management. To get started, install Poetry and run the following commands:
+This project uses [pdm](https://pdm-project.org/en/stable) for dependency management. To get started, install Poetry and run the following commands:
 
 ```bash
-# Install dependencies
-# This will create a virtual environment and install all dependencies
-# from the `pyproject.toml` file.
-poetry install
+# install dependencies
+pdm install
 
-# Activate the virtual environment
-# This will activate the virtual environment created by Poetry.
-poetry shell
+# migrate the database
+pdm run migrate
 
-# Run the development server
-# This will start the development server on `http://localhost:8000`.
-python manage.py runserver
+# run the development server on http://localhost:8000
+pdm run start
 ```

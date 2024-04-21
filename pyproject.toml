@@ -31,8 +31,8 @@ distribution = false
 
 [tool.pdm.scripts]
 start = "python manage.py runserver"
-migrate = "python manage.py migrate"
-show-migration = "python manage.py showmigrations"
-make-migration = "python manage.py makemigrations"
+migrate = "python manage.py migrate retia_api"
+show-migration = "python manage.py showmigrations retia_api"
+make-migration = "python manage.py makemigrations retia_api"
 create-superuser = "python manage.py createsuperuser"
 reset-database = "rm -rf src/databases/db.sqlite3"
