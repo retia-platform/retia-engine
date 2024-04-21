@@ -1,10 +1,14 @@
-import json, requests, urllib3
-from rest_framework import status
-from retia_api.models import *
+import json
 from datetime import datetime
 from math import ceil
-import tzlocal
 from threading import Thread
+
+import requests
+import tzlocal
+import urllib3
+from rest_framework import status
+
+from src.retia_api.models import *
 
 # Disable Sertificate Insecure Request Warning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

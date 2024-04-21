@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Device, Detector, ActivityLog
+
+from .models import ActivityLog, Detector, Device
 
 
 class DeviceSerializer(serializers.ModelSerializer):

@@ -1,4 +1,4 @@
-from retia_api.operation import *
+from src.retia_api.operation import *
 
 global_ipaddr = "172.16.0.1"
 global_port = "443"
