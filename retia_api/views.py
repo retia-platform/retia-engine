@@ -8,6 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+
 from retia_api.elasticclient import get_netflow_resampled
 from retia_api.logging import activity_log
 from retia_api.nescient import core
@@ -874,7 +875,7 @@ def detector_run(request, device):
                 else:
                     error += err
             activity_log("info", "retia-engine", "detector", str(error))
-            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": error})
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
