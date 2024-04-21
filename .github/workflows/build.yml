@@ -21,5 +21,7 @@ jobs:
         run: pdm install
       - name: Migrate the database
         run: pdm run migrate
+      - name: Check the application issues
+        run: pdm run check
       - name: Run the automated tests
         run: pdm run test

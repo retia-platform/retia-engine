@@ -26,5 +26,5 @@ pdm install
 pdm run migrate
 
 # run the development server on http://localhost:8000
-pdm run start
+pdm run dev
 ```

@@ -18,7 +18,8 @@ dependencies = [
     "icecream>=2.1.3",
     "pyyaml>=6.0.1",
     "pylint>=3.1.0",
-    "pytest>=8.1.1",
+    "Twisted[http2,tls]>=24.3.0",
+    "daphne>=4.1.2",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"
@@ -30,7 +31,10 @@ distribution = false
 
 
 [tool.pdm.scripts]
-start = "python manage.py runserver"
+dev = "python manage.py runserver 8080"
+serve="daphne -p 8000 retia_api.asgi:application"
+check = "python manage.py check"
+check-deployment = "python manage.py check --deploy"
 test = "python manage.py test tests"
 migrate = "python manage.py migrate retia_api"
 show-migration = "python manage.py showmigrations retia_api"

@@ -76,6 +76,7 @@ SIMPLE_JWT = {
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "retia_api",
     "rest_framework_simplejwt",
     "rest_framework",
@@ -114,6 +115,8 @@ TEMPLATES = [
         },
     },
 ]
+
+ASGI_APPLICATION = "retia_api.asgi.application"
 
 WSGI_APPLICATION = "retia_api.wsgi.application"
 
