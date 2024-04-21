@@ -1,13 +1,12 @@
 from django.apps import AppConfig
-
-from src.retia_api import settings
+from retia_api import settings
 
 
 class RetiaApiConfig(AppConfig):
-    name = "src.retia_api"
+    name = "retia_api"
 
     def ready(self):
-        from src.retia_api.scheduler import scheduler
+        from retia_api.scheduler import scheduler
 
         if settings.SCHEDULER_AUTOSTART:
             scheduler.start()

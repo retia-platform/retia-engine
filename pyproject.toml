@@ -30,8 +30,8 @@ distribution = false
 
 
 [tool.pdm.scripts]
-test = "python manage.py test"
 start = "python manage.py runserver"
+test = "python manage.py test tests"
 migrate = "python manage.py migrate retia_api"
 show-migration = "python manage.py showmigrations retia_api"
 make-migration = "python manage.py makemigrations retia_api"

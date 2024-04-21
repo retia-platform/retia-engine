@@ -16,7 +16,7 @@ from pathlib import Path
 import tzlocal
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -76,7 +76,7 @@ SIMPLE_JWT = {
 # Application definition
 
 INSTALLED_APPS = [
-    "src.retia_api",
+    "retia_api",
     "rest_framework_simplejwt",
     "rest_framework",
     "django.contrib.admin",
@@ -97,7 +97,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "src.retia_api.urls"
+ROOT_URLCONF = "retia_api.urls"
 
 TEMPLATES = [
     {
@@ -115,7 +115,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "src.retia_api.wsgi.application"
+WSGI_APPLICATION = "retia_api.wsgi.application"
 
 
 # Database
@@ -124,7 +124,7 @@ WSGI_APPLICATION = "src.retia_api.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "src/retia_api/databases/db.sqlite3",
+        "NAME": BASE_DIR / "retia_api/databases/db.sqlite3",
     }
 }
 

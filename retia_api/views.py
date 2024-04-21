@@ -8,12 +8,11 @@ from apscheduler.triggers.interval import IntervalTrigger
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
-from src.retia_api.elasticclient import get_netflow_resampled
-from src.retia_api.logging import activity_log
-from src.retia_api.nescient import core
-from src.retia_api.operation import *
-from src.retia_api.scheduler import scheduler
+from retia_api.elasticclient import get_netflow_resampled
+from retia_api.logging import activity_log
+from retia_api.nescient import core
+from retia_api.operation import *
+from retia_api.scheduler import scheduler
 
 from .models import ActivityLog, Detector, Device
 from .serializers import ActivityLogSerializer, DetectorSerializer, DeviceSerializer

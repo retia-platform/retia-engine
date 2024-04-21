@@ -7,8 +7,7 @@ import requests
 import tzlocal
 import urllib3
 from rest_framework import status
-
-from src.retia_api.models import *
+from retia_api.models import *
 
 # Disable Sertificate Insecure Request Warning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

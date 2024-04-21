@@ -1,6 +1,5 @@
 from django.contrib import admin
-
-from src.retia_api.models import ActivityLog, Detector, Device
+from retia_api.models import ActivityLog, Detector, Device
 
 admin.site.register(Device)
 admin.site.register(Detector)
