@@ -32,7 +32,7 @@ distribution = false
 
 [tool.pdm.scripts]
 dev = "python manage.py runserver 8080"
-serve="daphne -p 8000 retia_api.asgi:application"
+serve="daphne -p 8000 retia_api.deployments.asgi:application"
 check = "python manage.py check"
 check-deployment = "python manage.py check --deploy"
 test = "python manage.py test tests"

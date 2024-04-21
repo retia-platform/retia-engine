@@ -22,7 +22,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from .views import *
+from retia_api.configurations.views import *
 
 urlpatterns = [
     path("admin", admin.site.urls),

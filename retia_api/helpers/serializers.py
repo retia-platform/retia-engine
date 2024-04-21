@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import ActivityLog, Detector, Device
+from retia_api.databases.models import ActivityLog, Detector, Device
 
 
 class DeviceSerializer(serializers.ModelSerializer):

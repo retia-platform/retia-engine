@@ -16,7 +16,7 @@ from pathlib import Path
 import tzlocal
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -98,7 +98,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "retia_api.urls"
+ROOT_URLCONF = "retia_api.configurations.urls"
 
 TEMPLATES = [
     {
@@ -116,9 +116,9 @@ TEMPLATES = [
     },
 ]
 
-ASGI_APPLICATION = "retia_api.asgi.application"
+ASGI_APPLICATION = "retia_api.deployments.asgi.application"
 
-WSGI_APPLICATION = "retia_api.wsgi.application"
+WSGI_APPLICATION = "retia_api.deployments.wsgi.application"
 
 
 # Database
@@ -173,3 +173,5 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+ADMIN_MODEL_REGISTRATION = "retia_api.configurations.administrators"

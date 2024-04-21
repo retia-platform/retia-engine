@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from retia_api.models import ActivityLog
+from retia_api.databases.models import ActivityLog
 
 
 def activity_log(severity, instance, category, messages):

@@ -3,17 +3,18 @@ from timeit import default_timer as timer
 
 import numpy as np
 import pandas as pd
-from retia_api.elasticclient import get_netflow_data_at_nearest_time
-from retia_api.logging import activity_log
-from retia_api.models import Detector
-from retia_api.operation import (
+
+from retia_api.databases.models import Detector
+from retia_api.helpers.elasticclient import get_netflow_data_at_nearest_time
+from retia_api.helpers.logging import activity_log
+from retia_api.helpers.operation import (
     createAcl,
     delAcl,
     getAclDetail,
     getAclList,
     setAclDetail,
 )
-from retia_api.utils import getprotobynumber
+from retia_api.helpers.utils import getprotobynumber
 
 
 def core(data_to_be_used: list, detector_instance: Detector):

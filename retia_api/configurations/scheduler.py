@@ -1,7 +1,8 @@
 import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from retia_api import settings
+
+from retia_api.configurations import settings
 
 scheduler = BackgroundScheduler()
 
