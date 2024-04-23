@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/github/license/retia-platform/retia-engine-experiment" alt="License" target="_blank" rel="noopener noreferrer">
 </a>
 
-## 🫙 retia engine
+## 📡 retia engine
 
 The core engine for Retia Platform.
 
