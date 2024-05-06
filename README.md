@@ -12,7 +12,7 @@
 
 The core engine for Retia Platform.
 
-> Written in [Python](https://www.python.org) using [Django](https://www.djangoproject.com) and [pdm](https://pdm-project.org/en/stable). Powered by [Prometheus](https://prometheus.io).
+> Written in [Python](https://www.python.org) using [Django](https://www.djangoproject.com) and [pdm](https://pdm-project.org/en/stable). Powered by [Prometheus](https://prometheus.io) and [Neon](https://neon.tech).
 
 ### 🚀 quickstart
 
